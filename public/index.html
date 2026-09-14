@@ -21,12 +21,36 @@
 </header>
 
 <div class="layout">
+  <aside id="adminSidebar" class="adminSidebar hidden">
+    <div class="adminSideBrand">
+      <b>ساحات سياسية</b>
+      <span>لوحة التحكم</span>
+    </div>
+    <button id="adminNavHome" class="active">الرئيسية</button>
+    <button id="adminNavRooms">الساحات</button>
+    <button id="adminNavUsers">المستخدمون</button>
+    <button id="adminNavRecordings">تسجيلات البث</button>
+    <button id="adminNavStats">الإحصائيات</button>
+    <button id="adminNavSettings">الإعدادات</button>
+  </aside>
+
   <aside class="rooms">
     <h3>الساحات السياسية</h3>
     <div id="rooms"></div>
   </aside>
 
   <main>
+    <section id="adminTopbar" class="adminTopbar hidden">
+      <div class="adminSearch">
+        <span>بحث</span>
+        <input id="adminSmartSearch" placeholder="ابحث في المنشورات والساحات...">
+      </div>
+      <div class="adminTopActions">
+        <button id="adminNotifyBtn">تنبيهات <b id="adminNotifyCount">0</b></button>
+        <button id="adminProfileQuick">الملف الشخصي</button>
+      </div>
+    </section>
+
     <section class="hero">
       <div>
         <h1 id="roomTitle">كل الساحات</h1>
@@ -52,10 +76,10 @@
         </div>
       </div>
       <div class="adminStats">
-        <div class="adminStat"><span>المنشورات المعروضة</span><b id="adminPostsCount">0</b></div>
-        <div class="adminStat"><span>التعليقات</span><b id="adminCommentsCount">0</b></div>
-        <div class="adminStat"><span>الإعجابات</span><b id="adminLikesCount">0</b></div>
-        <div class="adminStat"><span>الساحات</span><b id="adminRoomsCount">0</b></div>
+        <div class="adminStat"><i>📝</i><span>المنشورات</span><b id="adminPostsCount">0</b></div>
+        <div class="adminStat"><i>💬</i><span>التعليقات</span><b id="adminCommentsCount">0</b></div>
+        <div class="adminStat"><i>@</i><span>الإشارات</span><b id="adminMentionsCount">0</b></div>
+        <div class="adminStat"><i>▦</i><span>الساحات</span><b id="adminRoomsCount">0</b></div>
       </div>
       <div class="adminStatusGrid">
         <div class="adminStatus">
