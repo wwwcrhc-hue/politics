@@ -39,6 +39,36 @@
       </div>
     </section>
 
+    <section id="adminPanel" class="adminPanel hidden">
+      <div class="adminPanelHead">
+        <div>
+          <span class="adminEyebrow">لوحة تحكم المدير</span>
+          <h2>إدارة الساحات والمتابعة</h2>
+        </div>
+        <div class="adminActions">
+          <button id="adminUsersQuick">المستخدمون</button>
+          <button id="adminRecordingsQuick">تسجيلات البث</button>
+          <button id="adminRefreshQuick" class="primary">تحديث</button>
+        </div>
+      </div>
+      <div class="adminStats">
+        <div class="adminStat"><span>المنشورات المعروضة</span><b id="adminPostsCount">0</b></div>
+        <div class="adminStat"><span>التعليقات</span><b id="adminCommentsCount">0</b></div>
+        <div class="adminStat"><span>الإعجابات</span><b id="adminLikesCount">0</b></div>
+        <div class="adminStat"><span>الساحات</span><b id="adminRoomsCount">0</b></div>
+      </div>
+      <div class="adminStatusGrid">
+        <div class="adminStatus">
+          <span>الساحة الحالية</span>
+          <b id="adminRoomName">كل الساحات</b>
+        </div>
+        <div class="adminStatus">
+          <span>البث المباشر</span>
+          <b id="adminLiveState">لا يوجد بث الآن</b>
+        </div>
+      </div>
+    </section>
+
     <section id="composer" class="card hidden">
       <textarea id="postText" maxlength="4000" placeholder="اكتب رأيك السياسي أو تحليلك..."></textarea>
       <div class="uploadRow">
