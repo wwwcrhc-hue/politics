@@ -13,6 +13,7 @@
   <nav>
     <button id="homeBtn">الرئيسية</button>
     <button id="loginBtn">دخول</button>
+    <button id="adminPageBtn" class="hidden">لوحة الإدارة</button>
     <button id="recordingsBtn" class="hidden">تسجيلات البث</button>
     <button id="usersBtn" class="hidden">المستخدمون</button>
     <button id="profileBtn" class="hidden">حسابي</button>
@@ -36,6 +37,15 @@
 
   <aside class="rooms">
     <h3>الساحات السياسية</h3>
+    <button id="newRoomBtn" class="primary hidden">إنشاء غرفة</button>
+    <div id="roomForm" class="roomForm hidden">
+      <input id="roomNameInput" maxlength="60" placeholder="اسم الغرفة">
+      <textarea id="roomDescInput" maxlength="240" placeholder="وصف مختصر للغرفة"></textarea>
+      <div>
+        <button id="saveRoomBtn" class="primary">حفظ</button>
+        <button id="cancelRoomBtn">إلغاء</button>
+      </div>
+    </div>
     <div id="rooms"></div>
   </aside>
 
@@ -48,6 +58,32 @@
       <div class="adminTopActions">
         <button id="adminNotifyBtn">تنبيهات <b id="adminNotifyCount">0</b></button>
         <button id="adminProfileQuick">الملف الشخصي</button>
+      </div>
+    </section>
+
+    <section id="adminWorkspace" class="adminWorkspace hidden">
+      <div class="adminWorkspaceHead">
+        <div>
+          <span class="adminEyebrow">مساحة إدارة مستقلة</span>
+          <h1>مركز التحكم الكامل</h1>
+          <p>راقب الغرف والمحتوى والمستخدمين من مكان واحد، مع إمكانية الرجوع للواجهة العامة في أي وقت.</p>
+        </div>
+        <button id="adminBackToApp" class="primary">العودة للمنصة</button>
+      </div>
+      <div class="adminWorkspaceGrid">
+        <article class="adminControlCard">
+          <h3>إدارة الغرف</h3>
+          <div id="adminRoomsList" class="adminRoomsList"></div>
+        </article>
+        <article class="adminControlCard">
+          <h3>أدوات سريعة</h3>
+          <div class="adminToolGrid">
+            <button id="adminToolUsers">المستخدمون</button>
+            <button id="adminToolRecordings">تسجيلات البث</button>
+            <button id="adminToolCreateRoom">إنشاء غرفة</button>
+            <button id="adminToolRefresh" class="primary">تحديث البيانات</button>
+          </div>
+        </article>
       </div>
     </section>
 

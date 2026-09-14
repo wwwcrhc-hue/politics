@@ -40,8 +40,15 @@ create table if not exists rooms (
   id text primary key,
   name text not null,
   description text not null default '',
+  owner_user_id text references users(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+alter table rooms
+  add column if not exists owner_user_id text references users(id) on delete set null;
+
+create index if not exists rooms_owner_created_idx
+  on rooms (owner_user_id, created_at desc);
 
 create table if not exists posts (
   id text primary key,
@@ -141,7 +148,7 @@ create index if not exists reports_status_created_idx
   on reports (status, created_at desc);
 
 insert into app_meta (key, value)
-values ('schema', '{"version": 6}'::jsonb)
+values ('schema', '{"version": 7}'::jsonb)
 on conflict (key) do update
 set value = excluded.value,
     updated_at = now();

@@ -33,8 +33,14 @@ create index if not exists live_recordings_created_idx
 create index if not exists live_recordings_room_created_idx
   on live_recordings (room_id, created_at desc);
 
+alter table rooms
+  add column if not exists owner_user_id text references users(id) on delete set null;
+
+create index if not exists rooms_owner_created_idx
+  on rooms (owner_user_id, created_at desc);
+
 insert into app_meta (key, value)
-values ('schema', '{"version": 6}'::jsonb)
+values ('schema', '{"version": 7}'::jsonb)
 on conflict (key) do update
 set value = excluded.value,
     updated_at = now();

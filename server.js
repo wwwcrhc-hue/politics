@@ -143,6 +143,17 @@ async function roomExists(roomId) {
   const { rowCount } = await pool.query('select 1 from rooms where id = $1', [roomId]);
   return rowCount > 0;
 }
+async function getRoomById(roomId) {
+  const { rows } = await pool.query('select * from rooms where id = $1', [roomId]);
+  return rows[0] || null;
+}
+async function canManageRoom(userId, room) {
+  return !!room && (room.owner_user_id === userId || (await userIsAdmin(userId)));
+}
+function deleteUploadUrl(url, baseDir = UPLOAD_DIR) {
+  if (!url?.startsWith('/uploads/')) return;
+  try { fs.unlinkSync(path.join(baseDir, path.basename(url))); } catch {}
+}
 async function getPostForViewer(postId, viewerId = '') {
   const { rows } = await pool.query(`
     select p.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
@@ -209,16 +220,74 @@ app.get('/api/health', async (_req, res, next) => {
 app.get('/api/rooms', async (_req, res, next) => {
   try {
     const { rows } = await pool.query(`
-      select r.id, r.name, r.description,
+      select r.id, r.name, r.description, r.owner_user_id, r.created_at,
+        u.id as user_id,
+        u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
         count(distinct p.id) as posts,
         count(distinct m.id) as messages
       from rooms r
+      left join users u on u.id = r.owner_user_id
       left join posts p on p.room_id = r.id
       left join room_messages m on m.room_id = r.id
-      group by r.id
-      order by r.created_at asc, r.id asc
+      group by r.id, u.id
+      order by case when r.owner_user_id is null then 0 else 1 end, r.created_at asc, r.id asc
     `);
-    res.json(rows.map(r => ({ id: r.id, name: r.name, description: r.description, posts: Number(r.posts), messages: Number(r.messages) })));
+    res.json(rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      ownerUserId: r.owner_user_id || null,
+      owner: r.owner_user_id ? publicUser(userFromRow(r)) : null,
+      createdAt: rowTime(r.created_at),
+      posts: Number(r.posts),
+      messages: Number(r.messages)
+    })));
+  } catch (e) { next(e); }
+});
+
+app.post('/api/rooms', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const name = cleanText(req.body.name, 60);
+    const description = cleanText(req.body.description, 240);
+    if (name.length < 3) return res.status(400).json({ error: 'اسم الغرفة يجب أن يكون 3 أحرف على الأقل' });
+    const room = { id: makeId('room'), name, description, ownerUserId: req.user.id, createdAt: now() };
+    await pool.query(
+      'insert into rooms (id, name, description, owner_user_id, created_at) values ($1, $2, $3, $4, $5)',
+      [room.id, room.name, room.description, room.ownerUserId, room.createdAt]
+    );
+    res.status(201).json({ ...room, owner: publicUser(req.fullUser), posts: 0, messages: 0 });
+  } catch (e) { next(e); }
+});
+
+app.patch('/api/rooms/:id', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const room = await getRoomById(req.params.id);
+    if (!room) return res.status(404).json({ error: 'الغرفة غير موجودة' });
+    if (!(await canManageRoom(req.user.id, room))) return res.status(403).json({ error: 'لا يمكنك إدارة هذه الغرفة' });
+    const name = cleanText(req.body.name, 60);
+    const description = cleanText(req.body.description, 240);
+    if (name.length < 3) return res.status(400).json({ error: 'اسم الغرفة يجب أن يكون 3 أحرف على الأقل' });
+    await pool.query('update rooms set name = $1, description = $2 where id = $3', [name, description, room.id]);
+    io.to(`room:${room.id}`).emit('room:updated', { roomId: room.id });
+    res.json({ id: room.id, name, description, ownerUserId: room.owner_user_id || null });
+  } catch (e) { next(e); }
+});
+
+app.delete('/api/rooms/:id', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const room = await getRoomById(req.params.id);
+    if (!room) return res.status(404).json({ error: 'الغرفة غير موجودة' });
+    if (!(await canManageRoom(req.user.id, room))) return res.status(403).json({ error: 'لا يمكنك حذف هذه الغرفة' });
+    const posts = await pool.query('select media from posts where room_id = $1', [room.id]);
+    for (const p of posts.rows) for (const m of (p.media || [])) deleteUploadUrl(m.url);
+    const recordings = await pool.query('select url from live_recordings where room_id = $1', [room.id]);
+    for (const r of recordings.rows) deleteUploadUrl(r.url, RECORDING_DIR);
+    await pool.query('delete from posts where room_id = $1', [room.id]);
+    await pool.query('delete from rooms where id = $1', [room.id]);
+    liveByRoom.delete(room.id);
+    io.emit('room:deleted', { roomId: room.id });
+    io.emit('feed:changed', { roomId: room.id });
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 
@@ -332,7 +401,8 @@ app.delete('/api/posts/:id', auth, requireActiveUser, async (req, res, next) => 
     const { rows } = await pool.query('select * from posts where id = $1', [req.params.id]);
     const post = rows[0];
     if (!post) return res.status(404).json({ error: 'المنشور غير موجود' });
-    if (post.user_id !== req.user.id && !(await userIsAdmin(req.user.id))) return res.status(403).json({ error: 'لا يمكنك حذف هذا المنشور' });
+    const room = await getRoomById(post.room_id);
+    if (post.user_id !== req.user.id && !(await canManageRoom(req.user.id, room))) return res.status(403).json({ error: 'لا يمكنك حذف هذا المنشور' });
     for (const m of (post.media || [])) {
       if (m.url?.startsWith('/uploads/')) {
         try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(m.url))); } catch {}
@@ -383,10 +453,10 @@ app.post('/api/posts/:id/comments', auth, requireActiveUser, async (req, res, ne
 
 app.delete('/api/comments/:id', auth, requireActiveUser, async (req, res, next) => {
   try {
-    const { rows } = await pool.query('select c.*, p.room_id from comments c join posts p on p.id = c.post_id where c.id = $1', [req.params.id]);
+    const { rows } = await pool.query('select c.*, p.room_id, r.owner_user_id from comments c join posts p on p.id = c.post_id join rooms r on r.id = p.room_id where c.id = $1', [req.params.id]);
     const comment = rows[0];
     if (!comment) return res.status(404).json({ error: 'التعليق غير موجود' });
-    if (comment.user_id !== req.user.id && !(await userIsAdmin(req.user.id))) return res.status(403).json({ error: 'لا يمكنك حذف هذا التعليق' });
+    if (comment.user_id !== req.user.id && comment.owner_user_id !== req.user.id && !(await userIsAdmin(req.user.id))) return res.status(403).json({ error: 'لا يمكنك حذف هذا التعليق' });
     await pool.query('delete from comments where id = $1', [req.params.id]);
     io.emit('feed:changed', { roomId: comment.room_id, postId: comment.post_id });
     res.json({ ok: true });
@@ -419,10 +489,15 @@ app.get('/api/chat/:roomId', async (req, res, next) => {
 
 app.delete('/api/chat-messages/:id', auth, requireActiveUser, async (req, res, next) => {
   try {
-    const { rows } = await pool.query('select * from room_messages where id = $1', [req.params.id]);
+    const { rows } = await pool.query(`
+      select m.*, r.owner_user_id
+      from room_messages m
+      join rooms r on r.id = m.room_id
+      where m.id = $1
+    `, [req.params.id]);
     const message = rows[0];
     if (!message) return res.status(404).json({ error: 'الرسالة غير موجودة' });
-    if (message.user_id !== req.user.id && !(await userIsAdmin(req.user.id))) return res.status(403).json({ error: 'لا يمكنك حذف هذه الرسالة' });
+    if (message.user_id !== req.user.id && message.owner_user_id !== req.user.id && !(await userIsAdmin(req.user.id))) return res.status(403).json({ error: 'لا يمكنك حذف هذه الرسالة' });
     await pool.query('delete from room_messages where id = $1', [req.params.id]);
     io.to(`room:${message.room_id}`).emit('room:message-deleted', { id: req.params.id, roomId: message.room_id });
     res.json({ ok: true });
