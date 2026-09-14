@@ -776,6 +776,7 @@ io.on('connection', socket => {
   socket.on('disconnect', () => removeSocketFromRtc(socket));
 });
 
+app.get('/admin', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html'), e => e && next(e)));
 app.get('/', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'index.html'), e => e && next(e)));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'واجهة API غير موجودة' }));
 app.get('*', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'index.html'), e => e && next(e)));
