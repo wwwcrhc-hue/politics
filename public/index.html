@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0d12">
+  <title>ساحات سياسية</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">ساحات سياسية <span>5.0</span></div>
+  <nav>
+    <button id="homeBtn">الرئيسية</button>
+    <button id="loginBtn">دخول</button>
+    <button id="recordingsBtn" class="hidden">تسجيلات البث</button>
+    <button id="usersBtn" class="hidden">المستخدمون</button>
+    <button id="profileBtn" class="hidden">حسابي</button>
+    <button id="logoutBtn" class="hidden">خروج</button>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="rooms">
+    <h3>الساحات السياسية</h3>
+    <div id="rooms"></div>
+  </aside>
+
+  <main>
+    <section class="hero">
+      <div>
+        <h1 id="roomTitle">كل الساحات</h1>
+        <p id="roomDesc">منشورات سياسية، صوت مباشر، صور وفيديو، وبث حي.</p>
+      </div>
+      <div class="searchRow">
+        <input id="searchInput" placeholder="ابحث في المنشورات...">
+        <button id="searchBtn">بحث</button>
+        <button id="clearSearchBtn" class="hidden">مسح</button>
+      </div>
+    </section>
+
+    <section id="composer" class="card hidden">
+      <textarea id="postText" maxlength="4000" placeholder="اكتب رأيك السياسي أو تحليلك..."></textarea>
+      <div class="uploadRow">
+        <label class="filePick">📎 صور أو فيديو
+          <input id="postMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple>
+        </label>
+        <span id="mediaInfo" class="muted">حتى 4 ملفات، 200MB للملف</span>
+      </div>
+      <div id="mediaPreview" class="mediaPreview"></div>
+      <div class="composerRow">
+        <select id="postRoom"></select>
+        <button id="publishBtn" class="primary">نشر</button>
+      </div>
+    </section>
+
+    <section id="feed"></section>
+  </main>
+
+  <aside class="chat">
+    <h3>الدردشة المباشرة</h3>
+    <div id="chatNotice">اختر ساحة لفتح الدردشة.</div>
+
+    <section class="realtimeCard">
+      <div class="rtTitle">🎙️ الغرفة الصوتية <span id="voiceCount">0</span></div>
+      <div class="rtActions">
+        <button id="joinVoiceBtn">دخول صوتي</button>
+        <button id="muteBtn" class="hidden">كتم الميكروفون</button>
+        <button id="leaveVoiceBtn" class="danger hidden">خروج</button>
+      </div>
+      <div id="voiceStatus" class="muted">غير متصل</div>
+      <div id="remoteAudios"></div>
+    </section>
+
+    <section class="realtimeCard">
+      <div class="rtTitle">📺 البث المباشر</div>
+      <div id="liveStatus" class="muted">لا يوجد بث مباشر الآن</div>
+      <div id="liveRecordStatus" class="muted hidden">يتم تسجيل البث وحفظه للمراجعة الإدارية.</div>
+      <div class="rtActions">
+        <button id="startLiveBtn">ابدأ بث فيديو</button>
+        <button id="watchLiveBtn" class="hidden">مشاهدة البث</button>
+        <button id="stopLiveBtn" class="danger hidden">إيقاف البث</button>
+        <button id="forceStopLiveBtn" class="danger hidden">قطع البث</button>
+      </div>
+      <video id="liveVideo" class="liveVideo hidden" autoplay playsinline controls></video>
+    </section>
+
+    <div id="chatBox" class="chatBox"></div>
+    <div id="chatSend" class="chatSend hidden">
+      <input id="chatInput" maxlength="1000" placeholder="رسالة إلى الساحة">
+      <button id="chatBtn" class="primary">إرسال</button>
+    </div>
+  </aside>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modalCard">
+    <button id="closeModal" class="close">×</button>
+    <h2 id="modalTitle">تسجيل الدخول</h2>
+    <input id="authName" maxlength="24" placeholder="اسم المستخدم">
+    <input id="displayName" maxlength="40" class="hidden" placeholder="الاسم الظاهر">
+    <input id="authPass" type="password" maxlength="128" placeholder="كلمة المرور (8 أحرف على الأقل)">
+    <button id="authSubmit" class="primary">دخول</button>
+    <button id="switchAuth" class="link">إنشاء حساب جديد</button>
+    <p id="authError"></p>
+  </div>
+</div>
+
+<div id="recordingsModal" class="modal hidden">
+  <div class="modalCard wideModal">
+    <button id="closeRecordings" class="close">×</button>
+    <h2>تسجيلات البث المباشر</h2>
+    <div id="recordingsList" class="recordingsList"></div>
+  </div>
+</div>
+
+<div id="usersModal" class="modal hidden">
+  <div class="modalCard wideModal">
+    <button id="closeUsers" class="close">×</button>
+    <h2>إدارة المستخدمين</h2>
+    <div id="usersList" class="recordingsList"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

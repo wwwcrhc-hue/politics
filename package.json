@@ -1,0 +1,24 @@
+{
+  "name": "political-forums-app",
+  "version": "5.0.0",
+  "description": "ساحات سياسية - نقاشات سياسية ودردشة صوتية ورفع صور وفيديو وبث مباشر",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.23.0",
+    "socket.io": "^4.8.1"
+  }
+}
