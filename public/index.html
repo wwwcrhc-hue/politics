@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070a0f">
+  <title>ساحات سياسية</title>
+  <link rel="stylesheet" href="/style.css?v=7.0-user">
+</head>
+<body class="userApp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="ساحات سياسية">
+      <span class="brandMark">س</span>
+      <span><b>ساحات سياسية</b><small>واجهة المستخدم</small></span>
+    </a>
+    <div class="topSearch"><span>⌕</span><input id="searchInput" placeholder="ابحث في الآراء والتحليلات..."><button id="searchBtn">بحث</button><button class="hidden" id="clearSearchBtn">مسح</button></div>
+    <nav class="topActions">
+      <button id="homeBtn">الرئيسية</button>
+      <button id="loginBtn" class="primary">دخول</button>
+      <button id="adminPageBtn" class="adminLink hidden">مركز الإدارة المستقل</button>
+      <button id="profileBtn" class="hidden">حسابي</button>
+      <button id="logoutBtn" class="hidden">خروج</button>
+    </nav>
+  </header>
+
+  <div class="shell">
+    <aside class="roomsPane">
+      <div class="paneHead"><div><span class="eyebrow">مجتمعات سياسية</span><h2>الساحات</h2></div><button class="iconBtn primary hidden" id="newRoomBtn" title="إنشاء غرفة">＋</button></div>
+      <div class="roomForm hidden" id="roomForm">
+        <input id="roomNameInput" maxlength="60" placeholder="اسم الغرفة">
+        <textarea id="roomDescInput" maxlength="240" placeholder="وصف مختصر"></textarea>
+        <div class="inline"><button class="primary" id="saveRoomBtn">حفظ</button><button id="cancelRoomBtn">إلغاء</button></div>
+      </div>
+      <div class="roomsList" id="rooms"></div>
+      <div class="sideHint"><b>صلاحيات المستخدم</b><span>يمكنك إنشاء غرفك وإدارة أعضائها ومحتواها حسب دورك داخل كل غرفة.</span></div>
+    </aside>
+
+    <main class="feedPane">
+      <section class="roomHero">
+        <div class="heroText"><span class="eyebrow" id="roomContext">المشهد السياسي الآن</span><h1 id="roomTitle">كل الساحات</h1><p id="roomDesc">منشورات سياسية، غرف صوتية، صور وفيديو، وبث مباشر متعدد المشاركين.</p></div>
+        <div class="heroActions"><button id="manageRoomBtn" class="hidden">إدارة الغرفة</button></div>
+      </section>
+
+      <section class="composer hidden" id="composer">
+        <div class="composerTop"><span class="avatar" id="composerAvatar">أ</span><textarea id="postText" maxlength="4000" placeholder="ما رأيك في الحدث السياسي؟"></textarea></div>
+        <div class="mediaPreview" id="mediaPreview"></div>
+        <div class="composerBottom">
+          <label class="filePick">▣ صورة / فيديو<input id="postMedia" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
+          <span class="muted" id="mediaInfo">حتى 4 ملفات، 200MB للملف</span>
+          <select id="postRoom"></select>
+          <button class="primary" id="publishBtn">نشر</button>
+        </div>
+      </section>
+
+      <div class="feed" id="feed"></div>
+    </main>
+
+    <aside class="livePane">
+      <section class="liveCard voiceCard">
+        <div class="cardTitle"><div><span class="statusDot"></span><b>الغرفة الصوتية</b></div><span class="counter" id="voiceCount">0</span></div>
+        <p class="muted" id="voiceStatus">اختر ساحة ثم ادخل الغرفة الصوتية.</p>
+        <div class="participantList" id="voiceParticipants"></div>
+        <div class="rtActions">
+          <button id="joinVoiceBtn" class="primary">دخول صوتي</button>
+          <button id="muteBtn" class="hidden">كتم الميكروفون</button>
+          <button id="leaveVoiceBtn" class="danger hidden">خروج</button>
+        </div>
+        <div id="remoteAudios"></div>
+      </section>
+
+      <section class="liveCard videoCard">
+        <div class="cardTitle"><div><span class="livePill">LIVE</span><b>البث المباشر</b></div><span class="counter" id="liveViewerCount">0</span></div>
+        <p class="muted" id="liveStatus">لا يوجد بث مباشر الآن</p>
+        <div class="liveStage" id="liveStage"><video id="liveVideo" class="liveVideo hidden" autoplay playsinline controls></video></div>
+        <div class="livePeople" id="liveParticipants"></div>
+        <div class="rtActions">
+          <button id="startLiveBtn" class="primary">ابدأ بث فيديو</button>
+          <button id="watchLiveBtn" class="hidden">مشاهدة البث</button>
+          <button id="inviteGuestBtn" class="hidden">دعوة ضيف</button>
+          <button id="leaveGuestBtn" class="danger hidden">مغادرة المشاركة</button>
+          <button id="stopLiveBtn" class="danger hidden">إنهاء البث</button>
+        </div>
+      </section>
+
+      <section class="chatCard">
+        <div class="cardTitle"><b>دردشة الساحة</b></div>
+        <div class="chatNotice" id="chatNotice">اختر ساحة لفتح الدردشة.</div>
+        <div class="chatBox" id="chatBox"></div>
+        <div class="chatSend hidden" id="chatSend"><input id="chatInput" maxlength="1000" placeholder="اكتب رسالة..."><button class="primary" id="chatBtn">إرسال</button></div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="modal hidden" id="modal"><div class="modalCard authCard"><button class="close" id="closeModal">×</button><span class="eyebrow">ساحات سياسية</span><h2 id="modalTitle">تسجيل الدخول</h2><input id="authName" maxlength="24" placeholder="اسم المستخدم"><input id="displayName" class="hidden" maxlength="40" placeholder="الاسم الظاهر"><input id="authPass" maxlength="128" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)"><button class="primary wide" id="authSubmit">دخول</button><button class="link" id="switchAuth">إنشاء حساب جديد</button><p class="error" id="authError"></p></div></div>
+
+  <div class="modal hidden" id="roomManageModal"><div class="modalCard manageCard"><button class="close" id="closeRoomManage">×</button><span class="eyebrow">صلاحيات الغرفة</span><h2 id="manageRoomTitle">إدارة الغرفة</h2><div class="manageGrid"><section><h3>إضافة عضو</h3><div class="inline"><input id="memberUsername" placeholder="اسم المستخدم"><select id="memberRole"><option value="member">عضو</option><option value="moderator">مشرف غرفة</option></select><button class="primary" id="addMemberBtn">إضافة</button></div></section><section><h3>حالة الغرفة</h3><div class="inline"><button id="openRoomBtn">فتح الغرفة</button><button id="closeRoomBtn" class="danger">إغلاق الغرفة</button></div></section></div><div class="memberList" id="memberList"></div></div></div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js?v=7.0-user"></script>
+</body>
+</html>
