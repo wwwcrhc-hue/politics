@@ -595,6 +595,11 @@ io.on('connection', socket => {
       socket.emit('voice:count', { roomId, count: voiceRooms.get(roomId)?.size || 0 });
     } catch (e) { logError(e, 'socket room:join'); }
   });
+  socket.on('live:status-request', payload => {
+    const roomId = cleanText(payload?.roomId, 40);
+    const live = liveByRoom.get(roomId);
+    socket.emit('live:status', live ? { active: true, ...live } : { active: false, roomId });
+  });
   socket.on('room:message', async payload => {
     try {
       const decoded = decodeSocketToken(payload?.token);
@@ -654,6 +659,7 @@ io.on('connection', socket => {
       if (user.status !== 'active') return socket.emit('live:error', { error: 'حسابك موقوف مؤقتًا' });
       const live = { roomId, hostSocketId: socket.id, userId: user.id, displayName: user.displayName || user.username, startedAt: now() };
       liveByRoom.set(roomId, live);
+      socket.join(`room:${roomId}`);
       socket.join(`live:${roomId}`);
       io.to(`room:${roomId}`).emit('live:started', { active: true, ...live });
     } catch (e) { logError(e, 'socket live:start'); }
