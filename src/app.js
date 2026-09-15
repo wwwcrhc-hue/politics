@@ -1,17 +1,18 @@
 'use strict';
 
-require('dotenv').config();
-
 const express = require('express');
 const http = require('http');
-const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
-const { Pool } = require('pg');
 const { Server } = require('socket.io');
+const { createPool, createInitDb } = require('./config/database');
+const { env } = require('./config/env');
+const { createUpload, createDeleteUploadUrl } = require('./config/upload');
+const { createAuthMiddleware } = require('./middleware/auth');
+const { createErrorHandler } = require('./middleware/errorHandler');
+const { securityHeaders } = require('./middleware/security');
 const { createAdminRouter } = require('./routes/adminRoutes');
 const { createAuthRouter } = require('./routes/authRoutes');
 const { createChatRouter } = require('./routes/chatRoutes');
@@ -20,26 +21,14 @@ const { createPostsRouter } = require('./routes/postsRoutes');
 const { createReportsRouter } = require('./routes/reportsRoutes');
 const { createRoomsRouter } = require('./routes/roomsRoutes');
 const { createRealtimeService } = require('./services/realtimeService');
+const { makeId } = require('./utils/id');
+const { createMappers } = require('./utils/mappers');
+const { cleanText } = require('./utils/text');
+const { now, rowTime } = require('./utils/time');
 
-const APP_NAME = 'ساحات سياسية';
-const VERSION = '7.0.0';
-const HOST = process.env.HOST || '0.0.0.0';
-const START_PORT = normalizePort(process.env.PORT, 3000);
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-this-secret-before-public-deployment';
-const ROOT_DIR = path.resolve(__dirname, '..');
-const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
-const UPLOAD_DIR = path.join(ROOT_DIR, 'uploads');
-const LOG_DIR = path.join(ROOT_DIR, 'logs');
-const ERROR_LOG = path.join(LOG_DIR, 'error.log');
-const SCHEMA_FILE = path.join(ROOT_DIR, 'schema.sql');
-const DATABASE_URL = process.env.DATABASE_URL || '';
+for (const dir of [env.PUBLIC_DIR, env.UPLOAD_DIR, env.LOG_DIR]) fs.mkdirSync(dir, { recursive: true });
 
-for (const dir of [PUBLIC_DIR, UPLOAD_DIR, LOG_DIR]) fs.mkdirSync(dir, { recursive: true });
-
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: DATABASE_URL.includes('supabase.co') ? { rejectUnauthorized: false } : undefined
-});
+const pool = createPool(env.DATABASE_URL);
 
 const app = express();
 const server = http.createServer(app);
@@ -50,94 +39,17 @@ const io = new Server(server, {
   pingInterval: 25000
 });
 
-function normalizePort(value, fallback) {
-  const n = Number(value);
-  return Number.isInteger(n) && n >= 1 && n <= 65535 ? n : fallback;
-}
-function now() { return new Date().toISOString(); }
-function makeId(prefix = 'id') { return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`; }
-function cleanText(v, max) { return String(v ?? '').replace(/\u0000/g, '').trim().slice(0, max); }
 function logError(error, context = '') {
-  try { fs.appendFileSync(ERROR_LOG, `[${now()}] ${context}\n${error?.stack || error}\n\n`, 'utf8'); } catch {}
+  try { fs.appendFileSync(env.ERROR_LOG, `[${now()}] ${context}\n${error?.stack || error}\n\n`, 'utf8'); } catch {}
 }
-function publicUser(user) {
-  if (!user) return null;
-  const { passwordHash, ...safe } = user;
-  return safe;
-}
+const { publicUser, userFromRow, commentFromRow, messageFromRow, postView } = createMappers({ rowTime });
+
 function signToken(user) {
-  return jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
-}
-function auth(req, res, next) {
-  const h = req.headers.authorization || '';
-  const token = h.startsWith('Bearer ') ? h.slice(7) : '';
-  try { req.user = jwt.verify(token, JWT_SECRET); next(); }
-  catch { res.status(401).json({ error: 'يجب تسجيل الدخول أو تجديد الجلسة' }); }
-}
-async function requireAdmin(req, res, next) {
-  try {
-    const user = await getUserById(req.user.id);
-    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'هذه الميزة متاحة للمدير فقط' });
-    req.fullUser = user;
-    next();
-  } catch (e) { next(e); }
-}
-async function requireActiveUser(req, res, next) {
-  try {
-    const user = await getUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'الحساب غير موجود' });
-    if (user.status !== 'active') return res.status(403).json({ error: 'حسابك موقوف مؤقتًا ولا يملك صلاحية تنفيذ هذا الإجراء' });
-    req.fullUser = user;
-    next();
-  } catch (e) { next(e); }
-}
-function decodeSocketToken(token) {
-  try { return jwt.verify(String(token || ''), JWT_SECRET); } catch { return null; }
-}
-function rowTime(v) { return v?.toISOString?.() || v || null; }
-function userFromRow(row) {
-  if (!row) return null;
-  return {
-    id: row.user_id || row.id,
-    username: row.username,
-    displayName: row.display_name,
-    bio: row.bio || '',
-    passwordHash: row.password_hash,
-    role: row.role || 'user',
-    status: row.status || 'active',
-    createdAt: rowTime(row.user_created_at || row.created_at)
-  };
-}
-function postFromRow(row) {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    roomId: row.room_id,
-    text: row.text || '',
-    media: Array.isArray(row.media) ? row.media : [],
-    createdAt: rowTime(row.created_at),
-    editedAt: rowTime(row.edited_at)
-  };
-}
-function commentFromRow(row) {
-  return { id: row.id, postId: row.post_id, userId: row.user_id, text: row.text, createdAt: rowTime(row.created_at) };
-}
-function messageFromRow(row) {
-  return { id: row.id, roomId: row.room_id, userId: row.user_id, text: row.text, createdAt: rowTime(row.created_at) };
-}
-function postView(row) {
-  const post = postFromRow(row);
-  post.author = publicUser(userFromRow(row));
-  post.likes = Number(row.likes_count || 0);
-  post.comments = Number(row.comments_count || 0);
-  post.likedByMe = Boolean(row.liked_by_me);
-  return post;
+  return jwt.sign({ id: user.id, username: user.username }, env.JWT_SECRET, { expiresIn: '30d' });
 }
 
-async function initDb() {
-  if (!DATABASE_URL) throw new Error('DATABASE_URL is missing in .env');
-  await pool.query(fs.readFileSync(SCHEMA_FILE, 'utf8'));
-}
+const initDb = createInitDb({ pool, databaseUrl: env.DATABASE_URL, schemaFile: env.SCHEMA_FILE });
+
 async function getUserById(id) {
   const { rows } = await pool.query('select * from users where id = $1', [id]);
   return userFromRow(rows[0]);
@@ -180,10 +92,6 @@ async function logModeration(actorUserId, action, targetType, targetId, roomId =
       [makeId('mod'), actorUserId || null, action, targetType, targetId || '', roomId, JSON.stringify(details || {}), now()]);
   } catch (e) { logError(e, 'logModeration'); }
 }
-function deleteUploadUrl(url, baseDir = UPLOAD_DIR) {
-  if (!url?.startsWith('/uploads/')) return;
-  try { fs.unlinkSync(path.join(baseDir, path.basename(url))); } catch {}
-}
 async function getPostForViewer(postId, viewerId = '') {
   const { rows } = await pool.query(`
     select p.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
@@ -200,36 +108,20 @@ async function getPostForViewer(postId, viewerId = '') {
   return rows[0] ? postView(rows[0]) : null;
 }
 
-const allowedMime = new Map([
-  ['image/jpeg', '.jpg'], ['image/png', '.png'], ['image/webp', '.webp'], ['image/gif', '.gif'],
-  ['video/mp4', '.mp4'], ['video/webm', '.webm'], ['video/quicktime', '.mov']
-]);
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(10).toString('hex')}${allowedMime.get(file.mimetype) || ''}`)
-});
-const upload = multer({
-  storage,
-  limits: { files: 4, fileSize: 200 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => allowedMime.has(file.mimetype) ? cb(null, true) : cb(new Error('نوع الملف غير مسموح. استخدم صور JPG/PNG/WEBP/GIF أو فيديو MP4/WEBM/MOV.'))
-});
+const { auth, requireAdmin, requireActiveUser, decodeSocketToken } = createAuthMiddleware({ jwt, jwtSecret: env.JWT_SECRET, getUserById });
+const upload = createUpload({ uploadDir: env.UPLOAD_DIR });
+const deleteUploadUrl = createDeleteUploadUrl({ uploadDir: env.UPLOAD_DIR });
 
 const realtime = createRealtimeService({ io, pool, cleanText, decodeSocketToken, getUserById, getRoomById, roomPower, publicUser, makeId, now, logError, logModeration });
 
 app.disable('x-powered-by');
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
-  next();
-});
+app.use(securityHeaders);
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: false, limit: '2mb' }));
-app.use('/uploads', express.static(UPLOAD_DIR, { fallthrough: false, maxAge: '1h', setHeaders: res => res.setHeader('X-Content-Type-Options', 'nosniff') }));
-app.use(express.static(PUBLIC_DIR, { maxAge: 0 }));
+app.use('/uploads', express.static(env.UPLOAD_DIR, { fallthrough: false, maxAge: '1h', setHeaders: res => res.setHeader('X-Content-Type-Options', 'nosniff') }));
+app.use(express.static(env.PUBLIC_DIR, { maxAge: 0 }));
 
-app.use('/api/health', createHealthRouter({ pool, appName: APP_NAME, version: VERSION, now, getPort: () => server.address()?.port || null }));
+app.use('/api/health', createHealthRouter({ pool, appName: env.APP_NAME, version: env.VERSION, now, getPort: () => server.address()?.port || null }));
 
 app.use('/api/rooms', createRoomsRouter({ pool, io, auth, requireActiveUser, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom: () => realtime.liveByRoom }));
 
@@ -245,19 +137,13 @@ app.use('/api/admin', createAdminRouter({ pool, auth, requireAdmin, cleanText, r
 
 realtime.registerHandlers();
 
-app.get('/admin', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html'), e => e && next(e)));
-app.get('/', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'index.html'), e => e && next(e)));
+app.get('/admin', (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/admin.html`, e => e && next(e)));
+app.get('/', (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/index.html`, e => e && next(e)));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'واجهة API غير موجودة' }));
-app.get('*', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'index.html'), e => e && next(e)));
-app.use((error, req, res, next) => {
-  logError(error, `${req.method} ${req.originalUrl}`);
-  console.error(error);
-  if (res.headersSent) return next(error);
-  if (error instanceof multer.MulterError) return res.status(400).json({ error: error.code === 'LIMIT_FILE_SIZE' ? 'حجم الملف أكبر من 200MB' : 'خطأ في رفع الملف' });
-  res.status(error.status || 500).json({ error: 'حدث خطأ داخلي غير متوقع', details: process.env.NODE_ENV === 'production' ? undefined : String(error.message || error) });
-});
+app.get('*', (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/index.html`, e => e && next(e)));
+app.use(createErrorHandler({ multer, logError }));
 
-function startServer(port = START_PORT, attempt = 0) {
+function startServer(port = env.START_PORT, attempt = 0) {
   if (attempt >= 100 || port > 65535) {
     console.error('تعذر العثور على منفذ متاح');
     process.exitCode = 1;
@@ -278,7 +164,7 @@ function startServer(port = START_PORT, attempt = 0) {
   };
   server.once('error', onError);
   server.once('listening', onListening);
-  server.listen(port, HOST);
+    server.listen(port, env.HOST);
 }
 
 function shutdown(done = () => process.exit(0)) {
