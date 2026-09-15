@@ -159,6 +159,21 @@ app.get('/api/users/:id/profile', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+app.get('/api/users/search', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const q = cleanText(req.query.q, 40);
+    if (q.length < 2) return res.json([]);
+    const { rows } = await pool.query(`
+      select id, username, display_name, bio, avatar_url, role, status, created_at as user_created_at
+      from users
+      where id <> $1 and (lower(username) like lower($2) or lower(display_name) like lower($2))
+      order by case when lower(username) = lower($3) then 0 else 1 end, display_name asc
+      limit 12
+    `, [req.user.id, `%${q}%`, q]);
+    res.json(rows.map(r => publicUser(userFromRow(r))));
+  } catch (e) { next(e); }
+});
+
 app.get('/api/users/:id/posts', async (req, res, next) => {
   try {
     const userId = cleanText(req.params.id, 80);

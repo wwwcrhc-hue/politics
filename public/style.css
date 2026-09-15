@@ -180,6 +180,10 @@ body.liveMode .liveStage .liveTileBox video{height:100%!important}
 .profileActions button{flex:1 1 130px}
 .profileStats{display:flex;gap:8px;flex-wrap:wrap;color:var(--gold2);font-size:12px;font-weight:800;margin-top:6px}
 .socialGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.socialSearch{display:flex;gap:8px;margin:8px 0 12px}
+.socialSearch input{min-width:0;flex:1;border:1px solid var(--line);background:#090d14;color:var(--text);border-radius:11px;padding:11px;outline:none}
+.socialSearchResults{display:grid;gap:8px;margin-bottom:12px}
+.socialResult{border-color:rgba(217,182,103,.22);background:rgba(217,182,103,.06)}
 .socialGrid section{display:grid;gap:8px;align-content:start;padding:12px;border:1px solid var(--line);border-radius:14px;background:#090d14}
 .socialGrid h3{margin:0 0 4px}
 .socialRow{display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:8px;background:#0b0f17}
