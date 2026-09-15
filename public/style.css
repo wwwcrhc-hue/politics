@@ -65,3 +65,14 @@ body.liveMode .videoCard .rtActions,body.liveMode .videoCard .livePeople{align-s
 body.liveMode .liveStage{align-self:start!important;height:calc(100vh - 136px)!important;min-height:660px!important}
 @media(max-width:1180px){body.liveMode .videoCard{grid-template-areas:"head" "stage" "actions" "people"!important}body.liveMode .liveStage{height:clamp(600px,78vh,900px)!important;min-height:600px!important}}
 @media(max-width:760px){body.liveMode .liveStage{height:70vh!important;min-height:460px!important}}
+
+/* Pull live video tighter to the top and expose viewer/like counters. */
+body.liveMode .livePane{padding-top:0!important}
+body.liveMode .videoCard{padding-top:6px!important;gap:6px!important;grid-template-rows:36px minmax(0,1fr)!important}
+body.liveMode .videoCard .cardTitle{min-height:30px!important}
+body.liveMode .videoCard .cardTitle>div{display:flex!important;align-items:center!important;gap:8px!important}
+body.liveMode #liveViewerCount{min-width:auto!important;padding:5px 10px!important;color:var(--gold2)!important;background:rgba(217,182,103,.12)!important;border:1px solid rgba(217,182,103,.25)!important}
+body.liveMode #liveLikeBtn.liked{background:rgba(239,91,103,.16)!important;border-color:rgba(239,91,103,.38)!important;color:#ff9aa3!important}
+body.liveMode .liveStage{height:calc(100vh - 108px)!important;min-height:690px!important}
+@media(max-width:1180px){body.liveMode .videoCard{grid-template-rows:auto auto minmax(0,1fr) auto!important}body.liveMode .liveStage{height:clamp(640px,80vh,920px)!important;min-height:640px!important}}
+@media(max-width:760px){body.liveMode .liveStage{height:72vh!important;min-height:480px!important}}
