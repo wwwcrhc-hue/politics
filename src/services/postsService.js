@@ -32,6 +32,10 @@ function createPostsService({ postsRepository, cleanText, makeId, now, postView,
     return { post, view: await getPostForViewer(post.id, userId) };
   }
 
+  async function findPost(postId) {
+    return postsRepository.findPost(postId);
+  }
+
   async function deletePost(postId, userId) {
     const post = await postsRepository.findPost(postId);
     if (!post) throw createHttpError(404, 'المنشور غير موجود');
@@ -73,7 +77,7 @@ function createPostsService({ postsRepository, cleanText, makeId, now, postView,
     return { comment };
   }
 
-  return { listFeed, createPost, updatePost, deletePost, toggleLike, listComments, createComment, deleteComment };
+  return { listFeed, createPost, findPost, updatePost, deletePost, toggleLike, listComments, createComment, deleteComment };
 }
 
 module.exports = { createPostsService };

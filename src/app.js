@@ -104,6 +104,7 @@ app.post('/api/live/:roomId/topic-media', auth, requireActiveUser, upload.single
     const previous = live.topicMedia;
     const media = { url: `/uploads/${req.file.filename}`, type: req.file.mimetype.startsWith('image/') ? 'image' : 'video', mime: req.file.mimetype, name: cleanText(req.file.originalname, 120), size: req.file.size };
     live.topicMedia = media;
+    live.topicPlayback = { playing: true, muted: true };
     if (previous?.url) deleteUploadUrl(previous.url);
     io.to(`live:${roomId}`).emit('live:topic-media', { roomId, media });
     io.to(`room:${roomId}`).emit('live:status', realtime.livePublic(live));
@@ -131,6 +132,51 @@ app.delete('/api/live/:roomId/topic-media', auth, requireActiveUser, async (req,
 app.use('/api/rooms', createRoomsRouter({ pool, io, auth, requireActiveUser, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom: () => realtime.liveByRoom, livePublic: realtime.livePublic }));
 
 app.use('/api', createAuthRouter({ pool, bcrypt, cleanText, makeId, now, signToken, publicUser, userFromRow, auth, requireActiveUser }));
+
+app.post('/api/me/avatar', auth, requireActiveUser, upload.single('avatar'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'اختر صورة للبروفايل' });
+    if (!req.file.mimetype.startsWith('image/')) {
+      deleteUploadUrl(`/uploads/${req.file.filename}`);
+      return res.status(400).json({ error: 'صورة البروفايل يجب أن تكون صورة' });
+    }
+    const user = await getUserById(req.user.id);
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    await pool.query('update users set avatar_url = $1 where id = $2', [avatarUrl, req.user.id]);
+    if (user?.avatarUrl) deleteUploadUrl(user.avatarUrl);
+    res.json(publicUser(await getUserById(req.user.id)));
+  } catch (e) { next(e); }
+});
+
+app.get('/api/users/:id/profile', async (req, res, next) => {
+  try {
+    const user = publicUser(await getUserById(cleanText(req.params.id, 80)));
+    if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    res.json(user);
+  } catch (e) { next(e); }
+});
+
+app.get('/api/users/:id/posts', async (req, res, next) => {
+  try {
+    const userId = cleanText(req.params.id, 80);
+    const viewerId = '';
+    const { rows } = await pool.query(`
+      select p.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.created_at as user_created_at,
+        count(distinct l.id) as likes_count,
+        count(distinct c.id) as comments_count,
+        bool_or(case when l.user_id = $1 then true else false end) as liked_by_me
+      from posts p
+      join users u on u.id = p.user_id
+      left join likes l on l.post_id = p.id
+      left join comments c on c.post_id = p.id
+      where p.user_id = $2
+      group by p.id, u.id
+      order by p.created_at desc
+      limit 250
+    `, [viewerId, userId]);
+    res.json(rows.map(postView));
+  } catch (e) { next(e); }
+});
 
 app.use('/api', createPostsRouter({ pool, io, auth, requireActiveUser, upload, cleanText, makeId, now, postView, getPostForViewer, roomExists, getRoomById, userIsAdmin, canModerateRoom, commentFromRow, userFromRow, publicUser, getUserById, deleteUploadUrl }));
 

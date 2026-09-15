@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#070a0f">
   <title>ساحات سياسية</title>
-  <link rel="stylesheet" href="/style.css?v=7.11-live">
+  <link rel="stylesheet" href="/style.css?v=7.12-live">
 </head>
 <body class="userApp">
   <header class="topbar">
@@ -22,6 +22,8 @@
       <button id="logoutBtn" class="hidden">خروج</button>
     </nav>
   </header>
+
+  <section class="liveTicker hidden" id="liveTicker"></section>
 
   <div class="shell">
     <aside class="roomsPane">
@@ -78,8 +80,11 @@
           <button id="liveLikeBtn" class="hidden">إعجاب 0</button>
           <button id="liveMuteBtn" class="hidden">كتم الصوت</button>
           <button id="liveShareBtn" class="hidden">مشاركة البث</button>
+          <button id="requestGuestBtn" class="hidden">طلب مشاركة</button>
           <input id="liveTopicTitleInput" class="liveTopicTitleInput hidden" maxlength="120" placeholder="عنوان الحوار">
           <label id="liveTopicPick" class="liveTopicPick hidden">موضوع الحوار<input id="liveTopicMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
+          <button id="liveTopicPlayBtn" class="hidden">إيقاف الملف</button>
+          <button id="liveTopicMuteBtn" class="hidden">صوت الملف</button>
           <button id="clearLiveTopicBtn" class="hidden">إزالة الموضوع</button>
           <select id="liveGuestSelect" class="hidden"></select>
           <button id="inviteGuestBtn" class="hidden">دعوة ضيف</button>
@@ -103,8 +108,10 @@
 
   <div class="modal hidden" id="roomManageModal"><div class="modalCard manageCard"><button class="close" id="closeRoomManage">×</button><span class="eyebrow">صلاحيات الغرفة</span><h2 id="manageRoomTitle">إدارة الغرفة</h2><div class="manageGrid"><section><h3>إضافة عضو</h3><div class="inline"><input id="memberUsername" placeholder="اسم المستخدم"><select id="memberRole"><option value="member">عضو</option><option value="moderator">مشرف غرفة</option></select><button class="primary" id="addMemberBtn">إضافة</button></div></section><section><h3>حالة الغرفة</h3><div class="inline"><button id="openRoomBtn">فتح الغرفة</button><button id="closeRoomBtn" class="danger">إغلاق الغرفة</button></div></section></div><div class="memberList" id="memberList"></div></div></div>
 
+  <div class="modal hidden" id="profileModal"><div class="modalCard profileCard"><button class="close" id="closeProfile">×</button><div class="profileHead"><span class="profileAvatar" id="profileAvatar">أ</span><div><span class="eyebrow">الصفحة الشخصية</span><h2 id="profileTitle">حسابي</h2><p id="profileBioView" class="muted"></p></div></div><div class="profileForm" id="profileForm"><input id="profileName" maxlength="40" placeholder="الاسم الظاهر"><textarea id="profileBio" maxlength="240" placeholder="نبذة قصيرة"></textarea><label class="filePick">صورة البروفايل<input id="profileImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><input id="currentPassword" maxlength="128" type="password" placeholder="كلمة المرور الحالية"><input id="newPassword" maxlength="128" type="password" placeholder="كلمة المرور الجديدة"><button class="primary" id="saveProfileBtn">حفظ الحساب</button></div><h3>منشوراتي</h3><div class="profilePosts" id="profilePosts"></div></div></div>
+
   <div class="toast hidden" id="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=7.11-live"></script>
+  <script src="/app.js?v=7.12-live"></script>
 </body>
 </html>

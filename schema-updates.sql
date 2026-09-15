@@ -4,6 +4,9 @@
 alter table users
   add column if not exists status text not null default 'active';
 
+alter table users
+  add column if not exists avatar_url text not null default '';
+
 do $$
 begin
   if not exists (

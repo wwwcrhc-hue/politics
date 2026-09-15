@@ -30,7 +30,7 @@ function createSharedRepository({ pool, userFromRow }) {
 
   async function getPostForViewer(postId, viewerId = '') {
     const { rows } = await pool.query(`
-      select p.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
+      select p.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.created_at as user_created_at,
         count(distinct l.id) as likes_count,
         count(distinct c.id) as comments_count,
         bool_or(case when l.user_id = $2 then true else false end) as liked_by_me

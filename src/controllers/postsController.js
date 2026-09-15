@@ -43,7 +43,12 @@ function createPostsController({ postsService, io }) {
   }
 
   async function createComment(req, res, next) {
-    try { res.status(201).json(await postsService.createComment(req.params.id, req.user.id, req.body)); } catch (e) { handleError(e, res, next); }
+    try {
+      const comment = await postsService.createComment(req.params.id, req.user.id, req.body);
+      const post = await postsService.findPost(req.params.id);
+      if (post) io.emit('feed:changed', { roomId: post.room_id, postId: post.id });
+      res.status(201).json(comment);
+    } catch (e) { handleError(e, res, next); }
   }
 
   async function deleteComment(req, res, next) {

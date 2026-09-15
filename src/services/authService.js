@@ -15,7 +15,7 @@ function createAuthService({ usersRepository, bcrypt, cleanText, makeId, now, si
     if (password.length < 8 || password.length > 128) throw createHttpError(400, 'كلمة المرور بين 8 و128 حرفا');
     if (await usersRepository.usernameExists(username)) throw createHttpError(409, 'اسم المستخدم مستخدم بالفعل');
 
-    const user = { id: makeId('u'), username, displayName, bio: '', passwordHash: await bcrypt.hash(password, 12), createdAt: now(), role: 'user', status: 'active' };
+    const user = { id: makeId('u'), username, displayName, bio: '', avatarUrl: '', passwordHash: await bcrypt.hash(password, 12), createdAt: now(), role: 'user', status: 'active' };
     await usersRepository.createUser(user);
     return { token: signToken(user), user: publicUser(user) };
   }
@@ -39,8 +39,16 @@ function createAuthService({ usersRepository, bcrypt, cleanText, makeId, now, si
     const user = await usersRepository.findById(userId);
     if (!user) throw createHttpError(404, 'الحساب غير موجود');
     const displayName = 'displayName' in body ? (cleanText(body.displayName, 40) || user.displayName) : user.displayName;
-    const bio = 'bio' in body ? cleanText(body.bio, 180) : user.bio;
-    return publicUser(await usersRepository.updateProfile(userId, { displayName, bio }));
+    const bio = 'bio' in body ? cleanText(body.bio, 240) : user.bio;
+    const avatarUrl = 'avatarUrl' in body ? cleanText(body.avatarUrl, 240) : user.avatarUrl;
+    const currentPassword = String(body.currentPassword || '');
+    const newPassword = String(body.newPassword || '');
+    if (newPassword) {
+      if (newPassword.length < 8 || newPassword.length > 128) throw createHttpError(400, 'كلمة المرور الجديدة بين 8 و128 حرفا');
+      if (!(await bcrypt.compare(currentPassword, user.passwordHash || ''))) throw createHttpError(403, 'كلمة المرور الحالية غير صحيحة');
+      await usersRepository.updatePassword(userId, await bcrypt.hash(newPassword, 12));
+    }
+    return publicUser(await usersRepository.updateProfile(userId, { displayName, bio, avatarUrl }));
   }
 
   return { register, login, getMe, updateMe };

@@ -144,3 +144,25 @@ body.liveMode .liveTopicTitleView{position:absolute!important;top:52px!important
 .liveRoleBadge{display:inline-grid;place-items:center;flex:0 0 auto;margin-inline-start:auto;padding:4px 8px;border-radius:999px;background:rgba(217,182,103,.16);border:1px solid rgba(217,182,103,.34);color:var(--gold2);font-size:11px;font-weight:900;white-space:nowrap}
 .speakerRow.role-guest .liveRoleBadge{background:rgba(66,198,138,.18);border-color:rgba(66,198,138,.42);color:#9ff0c5}
 .speakerRow .liveManage{flex-basis:100%;width:100%;margin-top:6px}
+.miniAvatar,.authorAvatar,.profileAvatar{object-fit:cover}
+img.miniAvatar{width:30px;height:30px;border-radius:10px}
+.authorBtn{display:flex;align-items:center;gap:9px;border:0;background:transparent;padding:0;text-align:right}
+.authorAvatar{width:38px;height:38px;border-radius:12px;background:#1d2636}
+.authorBtn span{display:grid;gap:2px}
+.liveTicker{max-width:1680px;margin:14px auto 0;padding:10px 18px;display:flex;align-items:center;gap:10px;overflow:auto}
+.liveTicker>b{white-space:nowrap;color:var(--gold2)}
+.liveTickerItem{min-width:220px;display:grid;gap:3px;text-align:right;padding:9px 12px;border-radius:14px;background:#0b1018;border-color:rgba(240,56,71,.28)}
+.liveTickerItem span{width:max-content;padding:2px 6px;border-radius:6px;background:#f03847;color:#fff;font-size:10px;font-weight:900}
+.liveTickerItem.hot{border-color:rgba(217,182,103,.52);background:linear-gradient(135deg,rgba(217,182,103,.13),rgba(240,56,71,.08))}
+.liveTickerItem strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.liveTickerItem small{color:var(--muted);white-space:nowrap}
+.liveRequests{display:grid;gap:8px;padding:10px;border:1px solid rgba(66,198,138,.16);border-radius:14px;background:rgba(66,198,138,.06)}
+.requestRow{border-color:rgba(66,198,138,.26)!important}
+.speakerRow.isSpeaking{box-shadow:0 0 0 2px rgba(217,182,103,.2),0 12px 30px rgba(217,182,103,.08)}
+.activeSpeakerTile{outline:3px solid rgba(217,182,103,.86)!important;outline-offset:-3px}
+.profileCard{width:min(94vw,860px)!important}
+.profileHead{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.profileAvatar{width:72px;height:72px;border-radius:20px;background:#1d2636;display:grid;place-items:center;color:var(--gold2);font-size:28px;font-weight:900;flex:0 0 auto}
+.profileForm{display:grid;gap:10px;margin-bottom:16px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#090d14}
+.profileForm textarea{min-height:76px;resize:vertical;border:1px solid var(--line);background:#090d14;color:var(--text);border-radius:11px;padding:11px;outline:none}
+.profilePosts{display:grid;gap:12px}

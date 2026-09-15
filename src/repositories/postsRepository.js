@@ -7,7 +7,7 @@ function createPostsRepository({ pool }) {
     if (room) { params.push(room); where.push(`p.room_id = $${params.length}`); }
     if (q) { params.push(`%${q}%`); where.push(`p.text ilike $${params.length}`); }
     const { rows } = await pool.query(`
-      select p.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
+      select p.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.created_at as user_created_at,
         count(distinct l.id) as likes_count,
         count(distinct c.id) as comments_count,
         bool_or(case when l.user_id = $1 then true else false end) as liked_by_me
@@ -63,7 +63,7 @@ function createPostsRepository({ pool }) {
 
   async function listComments(postId) {
     const { rows } = await pool.query(`
-      select c.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at
+      select c.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.created_at as user_created_at
       from comments c
       join users u on u.id = c.user_id
       where c.post_id = $1
