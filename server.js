@@ -15,6 +15,7 @@ const { Server } = require('socket.io');
 const { createAuthRouter } = require('./src/routes/authRoutes');
 const { createChatRouter } = require('./src/routes/chatRoutes');
 const { createHealthRouter } = require('./src/routes/healthRoutes');
+const { createReportsRouter } = require('./src/routes/reportsRoutes');
 
 const APP_NAME = 'ساحات سياسية';
 const VERSION = '7.0.0';
@@ -498,15 +499,7 @@ app.delete('/api/comments/:id', auth, requireActiveUser, async (req, res, next) 
   } catch (e) { next(e); }
 });
 
-app.post('/api/reports', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    await pool.query(
-      'insert into reports (id, reporter_id, target_type, target_id, reason, status, created_at) values ($1, $2, $3, $4, $5, $6, $7)',
-      [makeId('r'), req.user.id, cleanText(req.body.targetType, 20), cleanText(req.body.targetId, 80), cleanText(req.body.reason, 500), 'open', now()]
-    );
-    res.status(201).json({ ok: true });
-  } catch (e) { next(e); }
-});
+app.use('/api', createReportsRouter({ pool, auth, requireActiveUser, requireAdmin, cleanText, makeId, now, rowTime, logModeration }));
 
 app.use('/api', createChatRouter({ pool, io, auth, requireActiveUser, getRoomById, canModerateRoom, messageFromRow, userFromRow, publicUser }));
 
@@ -564,8 +557,6 @@ app.delete('/api/admin/users/:id', auth, requireAdmin, async (req, res, next) =>
   } catch (e) { next(e); }
 });
 
-app.get('/api/admin/reports', auth, requireAdmin, async (_req,res,next)=>{try{const {rows}=await pool.query(`select rp.*,u.username,u.display_name from reports rp join users u on u.id=rp.reporter_id order by rp.created_at desc limit 300`);res.json(rows.map(r=>({id:r.id,targetType:r.target_type,targetId:r.target_id,reason:r.reason,status:r.status,createdAt:rowTime(r.created_at),reporter:{username:r.username,displayName:r.display_name}})))}catch(e){next(e)}});
-app.patch('/api/admin/reports/:id', auth, requireAdmin, async (req,res,next)=>{try{const status=['open','reviewing','resolved','dismissed'].includes(req.body.status)?req.body.status:'reviewing';const {rows}=await pool.query('update reports set status=$1 where id=$2 returning *',[status,req.params.id]);if(!rows[0])return res.status(404).json({error:'البلاغ غير موجود'});await logModeration(req.user.id,'report_status','report',req.params.id,null,{status});res.json({ok:true,status})}catch(e){next(e)}});
 app.get('/api/admin/moderation-logs', auth, requireAdmin, async (_req,res,next)=>{try{const {rows}=await pool.query(`select ml.*,u.username,u.display_name from moderation_logs ml left join users u on u.id=ml.actor_user_id order by ml.created_at desc limit 500`);res.json(rows.map(r=>({id:r.id,action:r.action,targetType:r.target_type,targetId:r.target_id,roomId:r.room_id,details:r.details||{},createdAt:rowTime(r.created_at),actor:r.actor_user_id?{username:r.username,displayName:r.display_name}:null})))}catch(e){next(e)}});
 app.get('/api/admin/active-sessions', auth, requireAdmin, async (_req,res)=>{res.json({live:[...liveByRoom.values()].map(livePublic),voice:[...voiceRooms.entries()].map(([roomId,state])=>({roomId,participants:[...state.participants.values()].map(p=>({socketId:p.socketId,user:p.user,role:p.role,muted:!!p.muted}))}))})});
 
