@@ -115,3 +115,5 @@ body.liveMode #liveViewerCount{display:none!important}
 body.liveMode .videoCard .rtActions .liveSoundBtn{position:relative!important;width:42px!important;min-width:42px!important;padding:0!important;font-size:19px!important;line-height:1!important}
 body.liveMode .videoCard .rtActions .liveSoundBtn.muted{color:#ff8e98!important;border-color:rgba(239,91,103,.52)!important;background:rgba(239,91,103,.18)!important}
 body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";position:absolute;width:25px;height:2px;border-radius:2px;background:#ff4d5d;left:8px;top:20px;transform:rotate(-35deg);box-shadow:0 0 8px rgba(255,77,93,.5)}
+.liveReplaceSelect{min-width:120px;max-width:170px;border:1px solid rgba(217,182,103,.28);background:#090d14;color:var(--text);border-radius:9px;padding:5px 8px;font-size:11px;outline:none}
+.liveManage .liveReplaceSelect:disabled{opacity:.55;color:var(--muted)}
