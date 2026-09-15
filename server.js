@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { Pool } = require('pg');
 const { Server } = require('socket.io');
+const { createAdminRouter } = require('./src/routes/adminRoutes');
 const { createAuthRouter } = require('./src/routes/authRoutes');
 const { createChatRouter } = require('./src/routes/chatRoutes');
 const { createHealthRouter } = require('./src/routes/healthRoutes');
@@ -503,62 +504,7 @@ app.use('/api', createReportsRouter({ pool, auth, requireActiveUser, requireAdmi
 
 app.use('/api', createChatRouter({ pool, io, auth, requireActiveUser, getRoomById, canModerateRoom, messageFromRow, userFromRow, publicUser }));
 
-app.get('/api/admin/users', auth, requireAdmin, async (_req, res, next) => {
-  try {
-    const { rows } = await pool.query(`
-      select u.id, u.username, u.display_name, u.bio, u.role, u.status, u.created_at,
-        count(distinct p.id)::int as posts,
-        count(distinct m.id)::int as messages
-      from users u
-      left join posts p on p.user_id = u.id
-      left join room_messages m on m.user_id = u.id
-      group by u.id
-      order by u.created_at desc
-      limit 500
-    `);
-    res.json(rows.map(r => ({
-      id: r.id,
-      username: r.username,
-      displayName: r.display_name,
-      bio: r.bio,
-      role: r.role,
-      status: r.status || 'active',
-      createdAt: rowTime(r.created_at),
-      posts: Number(r.posts || 0),
-      messages: Number(r.messages || 0)
-    })));
-  } catch (e) { next(e); }
-});
-
-app.patch('/api/admin/users/:id', auth, requireAdmin, async (req, res, next) => {
-  try {
-    const role = cleanText(req.body.role, 20);
-    const status = cleanText(req.body.status, 20);
-    const displayName = cleanText(req.body.displayName, 40);
-    const bio = cleanText(req.body.bio, 180);
-    if (role && !['user', 'moderator', 'admin'].includes(role)) return res.status(400).json({ error: 'الدور غير صحيح' });
-    if (status && !['active', 'suspended'].includes(status)) return res.status(400).json({ error: 'حالة الحساب غير صحيحة' });
-    const user = await getUserById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'الحساب غير موجود' });
-    const { rows } = await pool.query(
-      'update users set role = $1, status = $2, display_name = $3, bio = $4 where id = $5 returning *',
-      [role || user.role, status || user.status, displayName || user.displayName, 'bio' in req.body ? bio : user.bio, req.params.id]
-    );
-    res.json(publicUser(userFromRow(rows[0])));
-  } catch (e) { next(e); }
-});
-
-app.delete('/api/admin/users/:id', auth, requireAdmin, async (req, res, next) => {
-  try {
-    const user = await getUserById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'الحساب غير موجود' });
-    await pool.query('delete from users where id = $1', [req.params.id]);
-    res.json({ ok: true });
-  } catch (e) { next(e); }
-});
-
-app.get('/api/admin/moderation-logs', auth, requireAdmin, async (_req,res,next)=>{try{const {rows}=await pool.query(`select ml.*,u.username,u.display_name from moderation_logs ml left join users u on u.id=ml.actor_user_id order by ml.created_at desc limit 500`);res.json(rows.map(r=>({id:r.id,action:r.action,targetType:r.target_type,targetId:r.target_id,roomId:r.room_id,details:r.details||{},createdAt:rowTime(r.created_at),actor:r.actor_user_id?{username:r.username,displayName:r.display_name}:null})))}catch(e){next(e)}});
-app.get('/api/admin/active-sessions', auth, requireAdmin, async (_req,res)=>{res.json({live:[...liveByRoom.values()].map(livePublic),voice:[...voiceRooms.entries()].map(([roomId,state])=>({roomId,participants:[...state.participants.values()].map(p=>({socketId:p.socketId,user:p.user,role:p.role,muted:!!p.muted}))}))})});
+app.use('/api/admin', createAdminRouter({ pool, auth, requireAdmin, cleanText, rowTime, userFromRow, publicUser, getLiveByRoom: () => liveByRoom, getVoiceRooms: () => voiceRooms, livePublic }));
 
 const voiceRooms = new Map(); // roomId -> {participants: Map, monitors: Set}
 const liveByRoom = new Map(); // roomId -> live state
