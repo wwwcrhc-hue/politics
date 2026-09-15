@@ -107,3 +107,11 @@ body.liveMode .liveStage{align-self:stretch!important;height:calc(100vh - 74px)!
 body.liveMode .videoCard .livePeople{padding-top:54px!important}
 @media(max-width:1180px){body.liveMode .videoCard{grid-template-areas:"stage" "people"!important}body.liveMode .liveStage{height:clamp(620px,82vh,940px)!important;min-height:620px!important}}
 @media(max-width:760px){body.liveMode .liveStage{height:74vh!important;min-height:480px!important}}
+
+/* Viewer count lives with the viewers list; sound control is icon-first. */
+body.liveMode #liveViewerCount{display:none!important}
+.liveSectionTitle{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
+.viewerTotal{display:inline-grid;place-items:center;padding:3px 8px;border-radius:999px;background:rgba(217,182,103,.12);border:1px solid rgba(217,182,103,.24);color:var(--gold2);font-size:11px;font-weight:800}
+body.liveMode .videoCard .rtActions .liveSoundBtn{position:relative!important;width:42px!important;min-width:42px!important;padding:0!important;font-size:19px!important;line-height:1!important}
+body.liveMode .videoCard .rtActions .liveSoundBtn.muted{color:#ff8e98!important;border-color:rgba(239,91,103,.52)!important;background:rgba(239,91,103,.18)!important}
+body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";position:absolute;width:25px;height:2px;border-radius:2px;background:#ff4d5d;left:8px;top:20px;transform:rotate(-35deg);box-shadow:0 0 8px rgba(255,77,93,.5)}
