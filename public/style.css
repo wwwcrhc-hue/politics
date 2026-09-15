@@ -166,3 +166,27 @@ img.miniAvatar{width:30px;height:30px;border-radius:10px}
 .profileForm{display:grid;gap:10px;margin-bottom:16px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#090d14}
 .profileForm textarea{min-height:76px;resize:vertical;border:1px solid var(--line);background:#090d14;color:var(--text);border-radius:11px;padding:11px;outline:none}
 .profilePosts{display:grid;gap:12px}
+
+/* Per-video labels and social controls. */
+.liveTileBox{position:relative;overflow:hidden;border-radius:14px;background:#000}
+.liveTileBox video{width:100%;height:100%;display:block;object-fit:cover;border-radius:14px;background:#000}
+.liveTileName{position:absolute;top:10px;right:10px;z-index:3;max-width:calc(100% - 20px);padding:5px 10px;border-radius:999px;background:rgba(5,6,8,.72);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:12px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(10px)}
+body.liveMode .liveStage .liveTileBox{width:100%!important;height:100%!important;min-height:0!important;aspect-ratio:auto!important;position:relative!important;max-width:none!important;border:0!important;box-shadow:none!important}
+body.liveMode .liveStage .liveTileBox video{height:100%!important}
+.topBadge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-inline-start:4px;border-radius:999px;background:#f03847;color:#fff;font-size:11px;font-weight:900}
+.profileActions{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}
+.profileActions button{flex:1 1 130px}
+.profileStats{display:flex;gap:8px;flex-wrap:wrap;color:var(--gold2);font-size:12px;font-weight:800;margin-top:6px}
+.socialGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.socialGrid section{display:grid;gap:8px;align-content:start;padding:12px;border:1px solid var(--line);border-radius:14px;background:#090d14}
+.socialGrid h3{margin:0 0 4px}
+.socialRow{display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:8px;background:#0b0f17}
+.userLine{display:flex;align-items:center;gap:8px;min-width:0;border:0;background:transparent;padding:0;text-align:right}
+.userLine span{display:grid;min-width:0}
+.userLine b,.userLine small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.userLine small{color:var(--muted);font-size:11px}
+.directMessages{height:min(56vh,520px);overflow:auto;display:grid;align-content:start;gap:8px;padding:8px;border:1px solid var(--line);border-radius:14px;background:#080c13;margin:12px 0}
+.directMessages .msg{max-width:78%}
+.directMessages .msg.mine{justify-self:end;background:rgba(217,182,103,.13);border-color:rgba(217,182,103,.24)}
+.msg.unread{border-color:rgba(217,182,103,.32);background:rgba(217,182,103,.09)}
+@media(max-width:760px){.socialGrid{grid-template-columns:1fr}.directMessages .msg{max-width:92%}}

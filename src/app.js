@@ -178,6 +178,145 @@ app.get('/api/users/:id/posts', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+async function notifyUser(userId, actorUserId, type, text, data = {}) {
+  if (!userId || userId === actorUserId) return;
+  await pool.query(
+    'insert into notifications (id,user_id,actor_user_id,type,text,data,created_at) values ($1,$2,$3,$4,$5,$6::jsonb,$7)',
+    [makeId('n'), userId, actorUserId || null, type, text, JSON.stringify(data || {}), now()]
+  );
+}
+
+async function socialSummaryFor(viewerId, targetId) {
+  const [{ rows: followRows }, { rows: requestRows }, { rows: countRows }] = await Promise.all([
+    pool.query('select 1 from follows where follower_id = $1 and following_id = $2', [viewerId, targetId]),
+    pool.query(`select * from message_requests
+      where (from_user_id = $1 and to_user_id = $2) or (from_user_id = $2 and to_user_id = $1)
+      order by created_at desc limit 1`, [viewerId, targetId]),
+    pool.query(`select
+      (select count(*) from follows where following_id = $1) as followers,
+      (select count(*) from follows where follower_id = $1) as following`, [targetId])
+  ]);
+  return {
+    following: followRows.length > 0,
+    messageRequest: requestRows[0] || null,
+    followers: Number(countRows[0]?.followers || 0),
+    followingCount: Number(countRows[0]?.following || 0)
+  };
+}
+
+app.get('/api/users/:id/social', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const targetId = cleanText(req.params.id, 80);
+    if (!await getUserById(targetId)) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    res.json(await socialSummaryFor(req.user.id, targetId));
+  } catch (e) { next(e); }
+});
+
+app.post('/api/users/:id/follow', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const targetId = cleanText(req.params.id, 80);
+    if (targetId === req.user.id) return res.status(400).json({ error: 'لا يمكنك متابعة نفسك' });
+    const target = await getUserById(targetId);
+    if (!target) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    const existing = await pool.query('select 1 from follows where follower_id = $1 and following_id = $2', [req.user.id, targetId]);
+    if (existing.rowCount) {
+      await pool.query('delete from follows where follower_id = $1 and following_id = $2', [req.user.id, targetId]);
+      return res.json({ following: false, ...(await socialSummaryFor(req.user.id, targetId)) });
+    }
+    await pool.query('insert into follows (id,follower_id,following_id,created_at) values ($1,$2,$3,$4) on conflict (follower_id, following_id) do nothing', [makeId('f'), req.user.id, targetId, now()]);
+    await notifyUser(targetId, req.user.id, 'follow', `${req.fullUser.displayName || req.fullUser.username} بدأ بمتابعتك`, { userId: req.user.id });
+    res.json({ following: true, ...(await socialSummaryFor(req.user.id, targetId)) });
+  } catch (e) { next(e); }
+});
+
+app.get('/api/me/social', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const [followers, following, requests, notifications] = await Promise.all([
+      pool.query(`select f.created_at, u.id, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.status, u.created_at as user_created_at
+        from follows f join users u on u.id = f.follower_id where f.following_id = $1 order by f.created_at desc limit 80`, [req.user.id]),
+      pool.query(`select f.created_at, u.id, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.status, u.created_at as user_created_at
+        from follows f join users u on u.id = f.following_id where f.follower_id = $1 order by f.created_at desc limit 80`, [req.user.id]),
+      pool.query(`select mr.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.status, u.created_at as user_created_at
+        from message_requests mr join users u on u.id = mr.from_user_id
+        where mr.to_user_id = $1 and mr.status = 'pending' order by mr.created_at desc limit 80`, [req.user.id]),
+      pool.query(`select n.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.status, u.created_at as user_created_at
+        from notifications n left join users u on u.id = n.actor_user_id
+        where n.user_id = $1 order by n.created_at desc limit 80`, [req.user.id])
+    ]);
+    res.json({
+      followers: followers.rows.map(r => ({ ...publicUser(userFromRow(r)), followedAt: rowTime(r.created_at) })),
+      following: following.rows.map(r => ({ ...publicUser(userFromRow(r)), followedAt: rowTime(r.created_at) })),
+      requests: requests.rows.map(r => ({ id:r.id, fromUserId:r.from_user_id, user:publicUser(userFromRow(r)), createdAt:rowTime(r.created_at) })),
+      notifications: notifications.rows.map(r => ({ id:r.id, type:r.type, text:r.text, data:r.data || {}, readAt:rowTime(r.read_at), createdAt:rowTime(r.created_at), actor:publicUser(userFromRow(r)) }))
+    });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/notifications/read', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    await pool.query('update notifications set read_at = coalesce(read_at, $2) where user_id = $1', [req.user.id, now()]);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/users/:id/message-request', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const targetId = cleanText(req.params.id, 80);
+    if (targetId === req.user.id) return res.status(400).json({ error: 'لا يمكنك مراسلة نفسك' });
+    const target = await getUserById(targetId);
+    if (!target) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    const { rows } = await pool.query(`insert into message_requests (id,from_user_id,to_user_id,status,created_at,updated_at)
+      values ($1,$2,$3,'pending',$4,$4)
+      on conflict (from_user_id, to_user_id) do update set status = 'pending', updated_at = excluded.updated_at
+      returning *`, [makeId('mr'), req.user.id, targetId, now()]);
+    await notifyUser(targetId, req.user.id, 'message_request', `${req.fullUser.displayName || req.fullUser.username} طلب مراسلتك`, { requestId: rows[0].id, userId: req.user.id });
+    res.json({ ok: true, request: rows[0] });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/message-requests/:id/respond', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const status = req.body?.accept ? 'accepted' : 'rejected';
+    const { rows } = await pool.query(`update message_requests set status = $1, updated_at = $2
+      where id = $3 and to_user_id = $4 returning *`, [status, now(), cleanText(req.params.id, 80), req.user.id]);
+    const request = rows[0];
+    if (!request) return res.status(404).json({ error: 'طلب المراسلة غير موجود' });
+    await notifyUser(request.from_user_id, req.user.id, `message_${status}`, `${req.fullUser.displayName || req.fullUser.username} ${status === 'accepted' ? 'قبل' : 'رفض'} طلب المراسلة`, { userId: req.user.id });
+    res.json({ ok: true, request });
+  } catch (e) { next(e); }
+});
+
+async function canMessage(userA, userB) {
+  const { rowCount } = await pool.query(`select 1 from message_requests
+    where status = 'accepted' and ((from_user_id = $1 and to_user_id = $2) or (from_user_id = $2 and to_user_id = $1))`, [userA, userB]);
+  return rowCount > 0;
+}
+
+app.get('/api/messages/:userId', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const otherId = cleanText(req.params.userId, 80);
+    if (!await canMessage(req.user.id, otherId)) return res.status(403).json({ error: 'يجب قبول طلب المراسلة أولاً' });
+    const { rows } = await pool.query(`select dm.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.status, u.created_at as user_created_at
+      from direct_messages dm join users u on u.id = dm.from_user_id
+      where (dm.from_user_id = $1 and dm.to_user_id = $2) or (dm.from_user_id = $2 and dm.to_user_id = $1)
+      order by dm.created_at asc limit 250`, [req.user.id, otherId]);
+    res.json(rows.map(r => ({ id:r.id, fromUserId:r.from_user_id, toUserId:r.to_user_id, text:r.text, createdAt:rowTime(r.created_at), author:publicUser(userFromRow(r)) })));
+  } catch (e) { next(e); }
+});
+
+app.post('/api/messages/:userId', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const otherId = cleanText(req.params.userId, 80);
+    const text = cleanText(req.body?.text, 1500);
+    if (!text) return res.status(400).json({ error: 'اكتب رسالة أولاً' });
+    if (!await canMessage(req.user.id, otherId)) return res.status(403).json({ error: 'يجب قبول طلب المراسلة أولاً' });
+    const { rows } = await pool.query(`insert into direct_messages (id,from_user_id,to_user_id,text,created_at)
+      values ($1,$2,$3,$4,$5) returning *`, [makeId('dm'), req.user.id, otherId, text, now()]);
+    await notifyUser(otherId, req.user.id, 'direct_message', `${req.fullUser.displayName || req.fullUser.username} أرسل لك رسالة`, { userId: req.user.id });
+    res.status(201).json(rows[0]);
+  } catch (e) { next(e); }
+});
+
 app.use('/api', createPostsRouter({ pool, io, auth, requireActiveUser, upload, cleanText, makeId, now, postView, getPostForViewer, roomExists, getRoomById, userIsAdmin, canModerateRoom, commentFromRow, userFromRow, publicUser, getUserById, deleteUploadUrl }));
 
 app.use('/api', createReportsRouter({ pool, auth, requireActiveUser, requireAdmin, cleanText, makeId, now, rowTime, logModeration }));

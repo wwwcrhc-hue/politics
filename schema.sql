@@ -106,6 +106,48 @@ create table if not exists follows (
 create index if not exists follows_following_idx
   on follows (following_id);
 
+create table if not exists message_requests (
+  id text primary key,
+  from_user_id text not null references users(id) on delete cascade,
+  to_user_id text not null references users(id) on delete cascade,
+  status text not null default 'pending',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint message_requests_no_self check (from_user_id <> to_user_id),
+  constraint message_requests_status_check check (status in ('pending', 'accepted', 'rejected')),
+  constraint message_requests_pair_unique unique (from_user_id, to_user_id)
+);
+
+create index if not exists message_requests_to_status_idx
+  on message_requests (to_user_id, status, created_at desc);
+
+create table if not exists direct_messages (
+  id text primary key,
+  from_user_id text not null references users(id) on delete cascade,
+  to_user_id text not null references users(id) on delete cascade,
+  text text not null,
+  created_at timestamptz not null default now(),
+  constraint direct_messages_text_not_empty check (char_length(text) > 0),
+  constraint direct_messages_no_self check (from_user_id <> to_user_id)
+);
+
+create index if not exists direct_messages_pair_created_idx
+  on direct_messages (least(from_user_id, to_user_id), greatest(from_user_id, to_user_id), created_at desc);
+
+create table if not exists notifications (
+  id text primary key,
+  user_id text not null references users(id) on delete cascade,
+  actor_user_id text references users(id) on delete set null,
+  type text not null,
+  text text not null,
+  data jsonb not null default '{}'::jsonb,
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists notifications_user_created_idx
+  on notifications (user_id, created_at desc);
+
 create table if not exists room_messages (
   id text primary key,
   room_id text not null references rooms(id) on delete cascade,
@@ -134,7 +176,7 @@ create index if not exists reports_status_created_idx
   on reports (status, created_at desc);
 
 insert into app_meta (key, value)
-values ('schema', '{"version": 7}'::jsonb)
+values ('schema', '{"version": 10}'::jsonb)
 on conflict (key) do update
 set value = excluded.value,
     updated_at = now();
