@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check public/admin.js && node --check src/controllers/healthController.js && node --check src/routes/healthRoutes.js"
+    "check": "node scripts/check-js.js"
   },
   "engines": {
     "node": ">=20"

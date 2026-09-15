@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { Pool } = require('pg');
 const { Server } = require('socket.io');
+const { createAuthRouter } = require('./src/routes/authRoutes');
 const { createHealthRouter } = require('./src/routes/healthRoutes');
 
 const APP_NAME = 'ساحات سياسية';
@@ -370,54 +371,7 @@ app.patch('/api/rooms/:id/status', auth, requireActiveUser, async (req,res,next)
   }catch(e){next(e)}
 });
 
-app.post('/api/register', async (req, res, next) => {
-  try {
-    const username = cleanText(req.body.username, 24);
-    const displayName = cleanText(req.body.displayName, 40) || username;
-    const password = String(req.body.password || '');
-    if (!/^[A-Za-z0-9_\u0600-\u06FF]{3,24}$/.test(username)) return res.status(400).json({ error: 'اسم المستخدم بين 3 و24 حرفا وبدون مسافات' });
-    if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'كلمة المرور بين 8 و128 حرفا' });
-    const existing = await pool.query('select 1 from users where lower(username) = lower($1)', [username]);
-    if (existing.rowCount) return res.status(409).json({ error: 'اسم المستخدم مستخدم بالفعل' });
-    const user = { id: makeId('u'), username, displayName, bio: '', passwordHash: await bcrypt.hash(password, 12), createdAt: now(), role: 'user', status: 'active' };
-    await pool.query(
-      'insert into users (id, username, display_name, bio, password_hash, role, status, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [user.id, user.username, user.displayName, user.bio, user.passwordHash, user.role, user.status, user.createdAt]
-    );
-    res.status(201).json({ token: signToken(user), user: publicUser(user) });
-  } catch (e) { next(e); }
-});
-
-app.post('/api/login', async (req, res, next) => {
-  try {
-    const username = cleanText(req.body.username, 24);
-    const password = String(req.body.password || '');
-    const { rows } = await pool.query('select * from users where lower(username) = lower($1)', [username]);
-    const user = userFromRow(rows[0]);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash || ''))) return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
-    if (user.status !== 'active') return res.status(403).json({ error: 'الحساب موقوف مؤقتًا' });
-    res.json({ token: signToken(user), user: publicUser(user) });
-  } catch (e) { next(e); }
-});
-
-app.get('/api/me', auth, async (req, res, next) => {
-  try {
-    const user = await getUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'الحساب غير موجود' });
-    res.json(publicUser(user));
-  } catch (e) { next(e); }
-});
-
-app.patch('/api/me', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    const user = await getUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'الحساب غير موجود' });
-    const displayName = 'displayName' in req.body ? (cleanText(req.body.displayName, 40) || user.displayName) : user.displayName;
-    const bio = 'bio' in req.body ? cleanText(req.body.bio, 180) : user.bio;
-    const { rows } = await pool.query('update users set display_name = $1, bio = $2 where id = $3 returning *', [displayName, bio, req.user.id]);
-    res.json(publicUser(userFromRow(rows[0])));
-  } catch (e) { next(e); }
-});
+app.use('/api', createAuthRouter({ pool, bcrypt, cleanText, makeId, now, signToken, publicUser, userFromRow, auth, requireActiveUser }));
 
 app.get('/api/feed', async (req, res, next) => {
   try {
