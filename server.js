@@ -13,6 +13,7 @@ const multer = require('multer');
 const { Pool } = require('pg');
 const { Server } = require('socket.io');
 const { createAuthRouter } = require('./src/routes/authRoutes');
+const { createChatRouter } = require('./src/routes/chatRoutes');
 const { createHealthRouter } = require('./src/routes/healthRoutes');
 
 const APP_NAME = 'ساحات سياسية';
@@ -507,37 +508,7 @@ app.post('/api/reports', auth, requireActiveUser, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-app.get('/api/chat/:roomId', async (req, res, next) => {
-  try {
-    const { rows } = await pool.query(`
-      select m.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at
-      from room_messages m
-      join users u on u.id = m.user_id
-      where m.room_id = $1
-      order by m.created_at desc
-      limit 150
-    `, [req.params.roomId]);
-    res.json(rows.reverse().map(r => ({ ...messageFromRow(r), author: publicUser(userFromRow(r)) })));
-  } catch (e) { next(e); }
-});
-
-app.delete('/api/chat-messages/:id', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    const { rows } = await pool.query(`
-      select m.*, r.owner_user_id
-      from room_messages m
-      join rooms r on r.id = m.room_id
-      where m.id = $1
-    `, [req.params.id]);
-    const message = rows[0];
-    if (!message) return res.status(404).json({ error: 'الرسالة غير موجودة' });
-    const room = await getRoomById(message.room_id);
-    if (message.user_id !== req.user.id && !(await canModerateRoom(req.user.id, room))) return res.status(403).json({ error: 'لا يمكنك حذف هذه الرسالة' });
-    await pool.query('delete from room_messages where id = $1', [req.params.id]);
-    io.to(`room:${message.room_id}`).emit('room:message-deleted', { id: req.params.id, roomId: message.room_id });
-    res.json({ ok: true });
-  } catch (e) { next(e); }
-});
+app.use('/api', createChatRouter({ pool, io, auth, requireActiveUser, getRoomById, canModerateRoom, messageFromRow, userFromRow, publicUser }));
 
 app.get('/api/admin/users', auth, requireAdmin, async (_req, res, next) => {
   try {
