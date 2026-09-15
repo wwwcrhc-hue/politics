@@ -124,7 +124,7 @@ function startServer(port = env.START_PORT, attempt = 0) {
   const onListening = () => {
     server.off('error', onError);
     const actual = server.address().port;
-    console.log(`\n${APP_NAME} ${VERSION}\nhttp://localhost:${actual}\nفحص: http://localhost:${actual}/api/health\n`);
+    console.log(`\n${env.APP_NAME} ${env.VERSION}\nhttp://localhost:${actual}\nفحص: http://localhost:${actual}/api/health\n`);
   };
   server.once('error', onError);
   server.once('listening', onListening);
