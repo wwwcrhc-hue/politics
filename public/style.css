@@ -47,3 +47,13 @@ body.liveMode .videoCard .livePeople{grid-area:people!important}
 body.liveMode .videoCard .rtActions{grid-area:actions!important}
 body.liveMode .videoCard #liveStatus{text-align:center!important}
 @media(max-width:1180px){body.liveMode .videoCard{grid-template-columns:1fr!important;grid-template-areas:"head" "status" "stage" "actions" "people"!important}body.liveMode .liveStage{width:100%!important}}
+
+/* Live chat stays beside the video with its input visible. */
+body.liveMode .chatCard{height:calc(100vh - 112px)!important;max-height:calc(100vh - 112px)!important;overflow:hidden!important}
+body.liveMode .chatNotice{flex:0 0 auto!important}
+body.liveMode .chatBox{overflow:auto!important;min-height:0!important;max-height:none!important;scroll-behavior:smooth!important}
+body.liveMode .chatSend{flex:0 0 auto!important;position:sticky!important;bottom:0!important;background:linear-gradient(180deg,rgba(12,16,24,.7),rgba(12,16,24,1))!important}
+body.liveMode .chatSend input{min-width:0!important}
+body.liveMode .livePane{align-items:start!important}
+body.liveMode .videoCard,body.liveMode .chatCard{height:calc(100vh - 112px)!important}
+@media(max-width:1180px){body.liveMode .videoCard,body.liveMode .chatCard{height:auto!important;max-height:none!important}body.liveMode .chatCard{min-height:420px!important}}
