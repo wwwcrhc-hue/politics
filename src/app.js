@@ -87,6 +87,47 @@ app.use(express.static(env.PUBLIC_DIR, { maxAge: 0 }));
 
 app.use('/api/health', createHealthRouter({ pool, appName: env.APP_NAME, version: env.VERSION, now, getPort: () => server.address()?.port || null }));
 
+app.post('/api/live/:roomId/topic-media', auth, requireActiveUser, upload.single('media'), async (req, res, next) => {
+  try {
+    const roomId = cleanText(req.params.roomId, 40);
+    const room = await getRoomById(roomId);
+    const live = realtime.liveByRoom.get(roomId);
+    if (!room || !live) {
+      if (req.file) deleteUploadUrl(`/uploads/${req.file.filename}`);
+      return res.status(404).json({ error: 'لا يوجد بث مباشر في هذه الساحة' });
+    }
+    if (live.hostUserId !== req.fullUser.id) {
+      if (req.file) deleteUploadUrl(`/uploads/${req.file.filename}`);
+      return res.status(403).json({ error: 'صاحب البث فقط يستطيع تغيير موضوع الحوار' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'اختر صورة أو فيديو لعرضه في البث' });
+    const previous = live.topicMedia;
+    const media = { url: `/uploads/${req.file.filename}`, type: req.file.mimetype.startsWith('image/') ? 'image' : 'video', mime: req.file.mimetype, name: cleanText(req.file.originalname, 120), size: req.file.size };
+    live.topicMedia = media;
+    if (previous?.url) deleteUploadUrl(previous.url);
+    io.to(`live:${roomId}`).emit('live:topic-media', { roomId, media });
+    io.to(`room:${roomId}`).emit('live:status', realtime.livePublic(live));
+    io.emit('rooms:live-status', { roomId, active: true, live: realtime.livePublic(live) });
+    res.json({ ok: true, media });
+  } catch (e) { next(e); }
+});
+
+app.delete('/api/live/:roomId/topic-media', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const roomId = cleanText(req.params.roomId, 40);
+    const live = realtime.liveByRoom.get(roomId);
+    if (!live) return res.status(404).json({ error: 'لا يوجد بث مباشر في هذه الساحة' });
+    if (live.hostUserId !== req.fullUser.id) return res.status(403).json({ error: 'صاحب البث فقط يستطيع تغيير موضوع الحوار' });
+    const previous = live.topicMedia;
+    live.topicMedia = null;
+    if (previous?.url) deleteUploadUrl(previous.url);
+    io.to(`live:${roomId}`).emit('live:topic-media', { roomId, media: null });
+    io.to(`room:${roomId}`).emit('live:status', realtime.livePublic(live));
+    io.emit('rooms:live-status', { roomId, active: true, live: realtime.livePublic(live) });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 app.use('/api/rooms', createRoomsRouter({ pool, io, auth, requireActiveUser, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom: () => realtime.liveByRoom, livePublic: realtime.livePublic }));
 
 app.use('/api', createAuthRouter({ pool, bcrypt, cleanText, makeId, now, signToken, publicUser, userFromRow, auth, requireActiveUser }));

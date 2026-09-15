@@ -117,3 +117,14 @@ body.liveMode .videoCard .rtActions .liveSoundBtn.muted{color:#ff8e98!important;
 body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";position:absolute;width:25px;height:2px;border-radius:2px;background:#ff4d5d;left:8px;top:20px;transform:rotate(-35deg);box-shadow:0 0 8px rgba(255,77,93,.5)}
 .liveReplaceSelect{min-width:120px;max-width:170px;border:1px solid rgba(217,182,103,.28);background:#090d14;color:var(--text);border-radius:9px;padding:5px 8px;font-size:11px;outline:none}
 .liveManage .liveReplaceSelect:disabled{opacity:.55;color:var(--muted)}
+
+/* Host-selected discussion media appears as a first-class live tile. */
+.liveTopicPick{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid var(--line);background:#151b27;color:var(--text);border-radius:12px;padding:10px 14px;cursor:pointer;transition:.18s ease}
+.liveTopicPick:hover{transform:translateY(-1px);border-color:#394258;background:#1a2231}
+.liveTopicPick input{display:none}
+.liveTopicPick.isUploading{opacity:.7;pointer-events:none}
+.liveTopicPanel{position:relative;overflow:hidden;width:100%;aspect-ratio:16/10;border-radius:14px;background:#030406;border:1px solid rgba(217,182,103,.24)}
+.liveTopicPanel::before{content:"موضوع الحوار";position:absolute;top:10px;right:10px;z-index:2;padding:4px 8px;border-radius:999px;background:rgba(5,6,8,.66);border:1px solid rgba(255,255,255,.12);color:var(--gold2);font-size:11px;font-weight:800;backdrop-filter:blur(10px)}
+.liveTopicPanel img,.liveTopicPanel video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+body.liveMode .videoCard .rtActions .liveTopicPick{flex:0 0 auto!important;min-height:42px!important;min-width:92px!important;padding:7px 11px!important;border-radius:10px!important;background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.14)!important;color:var(--text)!important;font-size:12px!important}
+body.liveMode .liveTopicPanel{width:100%!important;height:100%!important;min-height:0!important;aspect-ratio:auto!important;border-radius:14px!important;background:#000!important;position:relative!important;max-width:none!important;box-shadow:none!important}
