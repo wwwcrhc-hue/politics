@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#070a0f">
   <title>ساحات سياسية</title>
-  <link rel="stylesheet" href="/style.css?v=7.10-live">
+  <link rel="stylesheet" href="/style.css?v=7.11-live">
 </head>
 <body class="userApp">
   <header class="topbar">
@@ -70,6 +70,7 @@
 
       <section class="liveCard videoCard">
         <div class="cardTitle"><div><span class="livePill">LIVE</span><b>البث المباشر</b></div><span class="counter" id="liveViewerCount">0</span></div>
+        <div id="liveTopicTitleView" class="liveTopicTitleView hidden"></div>
         <p class="muted" id="liveStatus">لا يوجد بث مباشر الآن</p>
         <div class="rtActions">
           <button id="startLiveBtn" class="primary">ابدأ بث فيديو</button>
@@ -77,6 +78,7 @@
           <button id="liveLikeBtn" class="hidden">إعجاب 0</button>
           <button id="liveMuteBtn" class="hidden">كتم الصوت</button>
           <button id="liveShareBtn" class="hidden">مشاركة البث</button>
+          <input id="liveTopicTitleInput" class="liveTopicTitleInput hidden" maxlength="120" placeholder="عنوان الحوار">
           <label id="liveTopicPick" class="liveTopicPick hidden">موضوع الحوار<input id="liveTopicMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
           <button id="clearLiveTopicBtn" class="hidden">إزالة الموضوع</button>
           <select id="liveGuestSelect" class="hidden"></select>
@@ -103,6 +105,6 @@
 
   <div class="toast hidden" id="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=7.10-live"></script>
+  <script src="/app.js?v=7.11-live"></script>
 </body>
 </html>
