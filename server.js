@@ -19,6 +19,7 @@ const { createHealthRouter } = require('./src/routes/healthRoutes');
 const { createPostsRouter } = require('./src/routes/postsRoutes');
 const { createReportsRouter } = require('./src/routes/reportsRoutes');
 const { createRoomsRouter } = require('./src/routes/roomsRoutes');
+const { createRealtimeService } = require('./src/services/realtimeService');
 
 const APP_NAME = 'ساحات سياسية';
 const VERSION = '7.0.0';
@@ -213,6 +214,8 @@ const upload = multer({
   fileFilter: (_req, file, cb) => allowedMime.has(file.mimetype) ? cb(null, true) : cb(new Error('نوع الملف غير مسموح. استخدم صور JPG/PNG/WEBP/GIF أو فيديو MP4/WEBM/MOV.'))
 });
 
+const realtime = createRealtimeService({ io, pool, cleanText, decodeSocketToken, getUserById, getRoomById, roomPower, publicUser, makeId, now, logError, logModeration });
+
 app.disable('x-powered-by');
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -228,7 +231,7 @@ app.use(express.static(PUBLIC_DIR, { maxAge: 0 }));
 
 app.use('/api/health', createHealthRouter({ pool, appName: APP_NAME, version: VERSION, now, getPort: () => server.address()?.port || null }));
 
-app.use('/api/rooms', createRoomsRouter({ pool, io, auth, requireActiveUser, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom: () => liveByRoom }));
+app.use('/api/rooms', createRoomsRouter({ pool, io, auth, requireActiveUser, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom: () => realtime.liveByRoom }));
 
 app.use('/api', createAuthRouter({ pool, bcrypt, cleanText, makeId, now, signToken, publicUser, userFromRow, auth, requireActiveUser }));
 
@@ -238,80 +241,9 @@ app.use('/api', createReportsRouter({ pool, auth, requireActiveUser, requireAdmi
 
 app.use('/api', createChatRouter({ pool, io, auth, requireActiveUser, getRoomById, canModerateRoom, messageFromRow, userFromRow, publicUser }));
 
-app.use('/api/admin', createAdminRouter({ pool, auth, requireAdmin, cleanText, rowTime, userFromRow, publicUser, getLiveByRoom: () => liveByRoom, getVoiceRooms: () => voiceRooms, livePublic }));
+app.use('/api/admin', createAdminRouter({ pool, auth, requireAdmin, cleanText, rowTime, userFromRow, publicUser, getLiveByRoom: () => realtime.liveByRoom, getVoiceRooms: () => realtime.voiceRooms, livePublic: realtime.livePublic }));
 
-const voiceRooms = new Map(); // roomId -> {participants: Map, monitors: Set}
-const liveByRoom = new Map(); // roomId -> live state
-function livePublic(live) {
-  return { active:true, roomId:live.roomId, sessionId:live.sessionId, hostSocketId:live.hostSocketId, userId:live.hostUserId, displayName:live.hostDisplayName, startedAt:live.startedAt, viewerCount:live.viewers.size, broadcasters:[...live.broadcasters.values()].map(b=>({socketId:b.socketId,userId:b.userId,displayName:b.displayName,role:b.role})) };
-}
-async function socketUser(socket, token) {
-  const decoded=decodeSocketToken(token); if(!decoded) return null;
-  const user=await getUserById(decoded.id); if(!user||user.status!=='active') return null;
-  socket.data.userId=user.id; socket.data.user=user; return user;
-}
-function emitVoiceState(roomId) {
-  const state=voiceRooms.get(roomId); const participants=state?[...state.participants.values()].map(p=>({socketId:p.socketId,user:p.user,role:p.role,muted:!!p.muted})):[];
-  io.to(`voice:${roomId}`).emit('voice:participants',{roomId,participants});
-  io.to(`room:${roomId}`).emit('voice:count',{roomId,count:participants.length});
-}
-function removeSocketFromRtc(socket) {
-  for (const [roomId,state] of voiceRooms) {
-    state.monitors?.delete(socket.id);
-    if(state.participants.delete(socket.id)){
-      socket.to(`voice:${roomId}`).emit('voice:user-left',{socketId:socket.id});
-      if(!state.participants.size && !(state.monitors?.size)) voiceRooms.delete(roomId);
-      emitVoiceState(roomId);
-    } else if(!state.participants.size && !(state.monitors?.size)) voiceRooms.delete(roomId);
-  }
-  for (const [roomId,live] of liveByRoom) {
-    live.viewers.delete(socket.id);
-    if(live.monitors?.delete(socket.id)) for(const b of live.broadcasters.keys()) io.to(b).emit('live:viewer-left',{viewerSocketId:socket.id,roomId});
-    if(socket.id===live.hostSocketId){
-      liveByRoom.delete(roomId); io.to(`room:${roomId}`).emit('live:ended',{roomId,forced:false}); io.to(`live:${roomId}`).emit('live:ended',{roomId,forced:false});
-    } else if(live.broadcasters.has(socket.id)) {
-      live.broadcasters.delete(socket.id); io.to(`live:${roomId}`).emit('live:broadcaster-removed',{roomId,socketId:socket.id}); io.to(`room:${roomId}`).emit('live:status',livePublic(live));
-    } else {
-      for(const b of live.broadcasters.keys()) io.to(b).emit('live:viewer-left',{viewerSocketId:socket.id,roomId});
-    }
-  }
-}
-
-io.on('connection', socket => {
-  socket.on('session:auth', async p=>{try{const u=await socketUser(socket,p?.token);socket.emit('session:auth-result',{ok:!!u,user:u?publicUser(u):null})}catch(e){logError(e,'session:auth')}});
-  socket.on('room:join', async roomId => {try{const room=await getRoomById(cleanText(roomId,40));if(!room)return;for(const r of socket.rooms)if(String(r).startsWith('room:'))socket.leave(r);socket.join(`room:${room.id}`);const live=liveByRoom.get(room.id);socket.emit('live:status',live?livePublic(live):{active:false,roomId:room.id});if(live)io.to(live.hostSocketId).emit('live:invite-candidates-changed',{roomId:room.id});const state=voiceRooms.get(room.id);socket.emit('voice:count',{roomId:room.id,count:state?.participants.size||0});}catch(e){logError(e,'room:join')}});
-  socket.on('live:status-request',p=>{const roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);socket.emit('live:status',live?livePublic(live):{active:false,roomId})});
-  socket.on('room:message', async p=>{try{const user=await socketUser(socket,p?.token);const roomId=cleanText(p?.roomId,40),text=cleanText(p?.text,1000);const room=await getRoomById(roomId);if(!user||!room||!text)return;const power=await roomPower(user.id,room);if(power.banned)return socket.emit('room:error',{error:'تم حجبك من هذه الغرفة'});if((room.status||'active')!=='active')return socket.emit('room:error',{error:'الغرفة مغلقة حاليًا'});const m={id:makeId('m'),roomId,userId:user.id,text,createdAt:now()};await pool.query('insert into room_messages (id,room_id,user_id,text,created_at) values ($1,$2,$3,$4,$5)',[m.id,m.roomId,m.userId,m.text,m.createdAt]);io.to(`room:${roomId}`).emit('room:message',{...m,author:publicUser(user)})}catch(e){logError(e,'room:message')}});
-
-  socket.on('voice:join', async p=>{try{const user=await socketUser(socket,p?.token);const roomId=cleanText(p?.roomId,40),room=await getRoomById(roomId);if(!user||!room)return socket.emit('voice:error',{error:'يلزم تسجيل الدخول'});const power=await roomPower(user.id,room);if(power.banned)return socket.emit('voice:error',{error:'تم حجبك من هذه الغرفة'});if((room.status||'active')!=='active')return socket.emit('voice:error',{error:'الغرفة مغلقة'});if(!voiceRooms.has(roomId))voiceRooms.set(roomId,{participants:new Map(),monitors:new Set()});const state=voiceRooms.get(roomId);const peers=[...state.participants.keys()];const role=power.role==='guest'?'member':power.role;state.participants.set(socket.id,{socketId:socket.id,user:publicUser(user),role,muted:false});socket.join(`voice:${roomId}`);socket.emit('voice:peers',{roomId,peers});socket.to(`voice:${roomId}`).emit('voice:user-joined',{socketId:socket.id,user:publicUser(user),role});for(const monitorId of state.monitors||[])socket.emit('voice:monitor-peer',{roomId,monitorSocketId:monitorId});emitVoiceState(roomId)}catch(e){logError(e,'voice:join')}});
-  socket.on('voice:leave',p=>{const roomId=cleanText(p?.roomId,40),state=voiceRooms.get(roomId);if(!state)return;state.participants.delete(socket.id);socket.leave(`voice:${roomId}`);socket.to(`voice:${roomId}`).emit('voice:user-left',{socketId:socket.id});if(!state.participants.size && !(state.monitors?.size))voiceRooms.delete(roomId);emitVoiceState(roomId)});
-  socket.on('voice:moderate', async p=>{try{const actor=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),targetSocketId=cleanText(p?.targetSocketId,80),action=cleanText(p?.action,20),room=await getRoomById(roomId),state=voiceRooms.get(roomId);if(!actor||!room||!state)return;const power=await roomPower(actor.id,room);if(!power.canModerate)return socket.emit('voice:error',{error:'ليست لديك صلاحية إدارة المتحدثين'});const target=state.participants.get(targetSocketId);if(!target)return;if(action==='mute'){target.muted=true;io.to(targetSocketId).emit('voice:force-mute',{roomId,by:actor.id});await logModeration(actor.id,'voice_mute','user',target.user.id,roomId,{})}else if(action==='kick'){state.participants.delete(targetSocketId);io.to(targetSocketId).emit('voice:kicked',{roomId,reason:'تم إخراجك من الغرفة الصوتية'});io.sockets.sockets.get(targetSocketId)?.leave(`voice:${roomId}`);io.to(`voice:${roomId}`).emit('voice:user-left',{socketId:targetSocketId});await logModeration(actor.id,'voice_kick','user',target.user.id,roomId,{})}emitVoiceState(roomId)}catch(e){logError(e,'voice:moderate')}});
-  socket.on('admin:voice-monitor', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40);if(!admin||admin.role!=='admin')return;let state=voiceRooms.get(roomId);if(!state){state={participants:new Map(),monitors:new Set()};voiceRooms.set(roomId,state)}if(!state.monitors)state.monitors=new Set();state.monitors.add(socket.id);socket.data.adminVoiceMonitorRoom=roomId;for(const peerId of state.participants.keys())io.to(peerId).emit('voice:monitor-peer',{roomId,monitorSocketId:socket.id});socket.emit('admin:voice-monitor-ready',{roomId,count:state.participants.size})}catch(e){logError(e,'admin:voice-monitor')}});
-  socket.on('admin:voice-unmonitor', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40);if(!admin||admin.role!=='admin')return;const state=voiceRooms.get(roomId);state?.monitors?.delete(socket.id);if(state&&!state.participants.size&&!state.monitors.size)voiceRooms.delete(roomId);socket.data.adminVoiceMonitorRoom=null}catch(e){logError(e,'admin:voice-unmonitor')}});
-
-  socket.on('rtc:offer',p=>p?.to&&io.to(p.to).emit('rtc:offer',{from:socket.id,sdp:p.sdp,kind:p.kind,roomId:p.roomId}));
-  socket.on('rtc:answer',p=>p?.to&&io.to(p.to).emit('rtc:answer',{from:socket.id,sdp:p.sdp,kind:p.kind,roomId:p.roomId}));
-  socket.on('rtc:ice',p=>p?.to&&io.to(p.to).emit('rtc:ice',{from:socket.id,candidate:p.candidate,kind:p.kind,roomId:p.roomId}));
-
-  socket.on('live:start', async p=>{try{const user=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),room=await getRoomById(roomId);if(!user||!room)return socket.emit('live:error',{error:'يلزم تسجيل الدخول'});const power=await roomPower(user.id,room);if(power.banned)return socket.emit('live:error',{error:'تم حجبك من الغرفة'});if((room.status||'active')!=='active')return socket.emit('live:error',{error:'الغرفة مغلقة'});if(liveByRoom.has(roomId))return socket.emit('live:error',{error:'يوجد بث مباشر قائم في هذه الغرفة'});const live={roomId,sessionId:makeId('live'),hostSocketId:socket.id,hostUserId:user.id,hostDisplayName:user.displayName||user.username,startedAt:now(),broadcasters:new Map(),viewers:new Set(),monitors:new Set(),invitedUsers:new Set()};live.broadcasters.set(socket.id,{socketId:socket.id,userId:user.id,displayName:user.displayName||user.username,role:'host'});liveByRoom.set(roomId,live);socket.join(`room:${roomId}`);socket.join(`live:${roomId}`);io.to(`room:${roomId}`).emit('live:started',livePublic(live));io.to(`live:${roomId}`).emit('live:status',livePublic(live))}catch(e){logError(e,'live:start')}});
-  socket.on('live:watch',p=>{const roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!live)return socket.emit('live:status',{active:false,roomId});live.viewers.add(socket.id);socket.join(`live:${roomId}`);for(const broadcasterSocket of live.broadcasters.keys())if(broadcasterSocket!==socket.id)io.to(broadcasterSocket).emit('live:viewer',{viewerSocketId:socket.id,roomId});socket.emit('live:status',livePublic(live))});
-  socket.on('live:unwatch',p=>{const roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);socket.leave(`live:${roomId}`);if(live){live.viewers.delete(socket.id);for(const b of live.broadcasters.keys())io.to(b).emit('live:viewer-left',{viewerSocketId:socket.id,roomId})}});
-  socket.on('live:invite-candidates', async p=>{try{const actor=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!actor||!live||live.hostUserId!==actor.id)return socket.emit('live:invite-candidates',{roomId,users:[]});const broadcasterUsers=new Set([...live.broadcasters.values()].map(b=>b.userId));const users=new Map();for(const s of io.sockets.sockets.values()){const user=s.data.user;if(!user||user.id===actor.id||broadcasterUsers.has(user.id)||!s.rooms.has(`room:${roomId}`))continue;users.set(user.id,publicUser(user));}socket.emit('live:invite-candidates',{roomId,users:[...users.values()]})}catch(e){logError(e,'live:invite-candidates')}});
-  socket.on('live:invite', async p=>{try{const actor=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!actor||!live||live.hostUserId!==actor.id)return socket.emit('live:error',{error:'صاحب البث فقط يستطيع دعوة ضيف'});let targetUserId=cleanText(p?.targetUserId,80);if(!targetUserId&&p?.username){const {rows}=await pool.query('select * from users where lower(username)=lower($1)',[cleanText(p.username,24)]);targetUserId=rows[0]?.id||'';}if(!targetUserId)return socket.emit('live:error',{error:'المستخدم غير موجود'});if(targetUserId===actor.id)return socket.emit('live:error',{error:'أنت بالفعل صاحب البث'});live.invitedUsers.add(targetUserId);let sent=false;for(const s of io.sockets.sockets.values())if(s.data.userId===targetUserId&&s.rooms.has(`room:${roomId}`)){s.emit('live:invite',{roomId,sessionId:live.sessionId,from:{userId:actor.id,displayName:actor.displayName||actor.username}});sent=true}socket.emit('live:invite-result',{ok:sent,targetUserId});await logModeration(actor.id,'live_invite','user',targetUserId,roomId,{sessionId:live.sessionId})}catch(e){logError(e,'live:invite')}});
-  socket.on('live:guest-accept', async p=>{try{const user=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!user||!live||!live.invitedUsers.has(user.id))return socket.emit('live:error',{error:'لا توجد دعوة صالحة لهذا البث'});live.invitedUsers.delete(user.id);live.broadcasters.set(socket.id,{socketId:socket.id,userId:user.id,displayName:user.displayName||user.username,role:'guest'});socket.join(`live:${roomId}`);for(const viewer of [...live.viewers,...(live.monitors||[])])if(viewer!==socket.id)io.to(socket.id).emit('live:viewer',{viewerSocketId:viewer,roomId});for(const [otherId,other] of live.broadcasters)if(otherId!==socket.id&&other.role==='host'){io.to(otherId).emit('live:viewer',{viewerSocketId:socket.id,roomId})}io.to(`live:${roomId}`).emit('live:broadcaster-added',{roomId,broadcaster:{socketId:socket.id,userId:user.id,displayName:user.displayName||user.username,role:'guest'}});io.to(`room:${roomId}`).emit('live:status',livePublic(live))}catch(e){logError(e,'live:guest-accept')}});
-  socket.on('live:guest-leave', async p=>{try{const user=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!user||!live)return;const target=live.broadcasters.get(socket.id);if(!target||target.role!=='guest')return;live.broadcasters.delete(socket.id);socket.leave(`live:${roomId}`);io.to(`live:${roomId}`).emit('live:broadcaster-removed',{roomId,socketId:socket.id});for(const b of live.broadcasters.keys())io.to(b).emit('live:viewer-left',{viewerSocketId:socket.id,roomId});io.to(`room:${roomId}`).emit('live:status',livePublic(live))}catch(e){logError(e,'live:guest-leave')}});
-  socket.on('live:guest-remove', async p=>{try{const actor=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),targetSocketId=cleanText(p?.targetSocketId,80),live=liveByRoom.get(roomId);if(!actor||!live||live.hostUserId!==actor.id)return;const target=live.broadcasters.get(targetSocketId);if(!target||target.role==='host')return;live.broadcasters.delete(targetSocketId);io.to(targetSocketId).emit('live:guest-removed',{roomId,reason:'أنهى صاحب البث مشاركتك'});io.to(`live:${roomId}`).emit('live:broadcaster-removed',{roomId,socketId:targetSocketId});await logModeration(actor.id,'live_guest_remove','user',target.userId,roomId,{sessionId:live.sessionId});io.to(`room:${roomId}`).emit('live:status',livePublic(live))}catch(e){logError(e,'live:guest-remove')}});
-  socket.on('live:broadcaster-mute', async p=>{try{const actor=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),targetSocketId=cleanText(p?.targetSocketId,80),live=liveByRoom.get(roomId);if(!actor||!live||live.hostUserId!==actor.id)return;const target=live.broadcasters.get(targetSocketId);if(!target||target.role==='host')return;io.to(targetSocketId).emit('live:force-mute',{roomId,reason:'تم كتم صوتك بواسطة مضيف البث'});await logModeration(actor.id,'live_guest_mute','user',target.userId,roomId,{sessionId:live.sessionId})}catch(e){logError(e,'live:broadcaster-mute')}});
-  socket.on('live:stop',p=>{const roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!live||live.hostSocketId!==socket.id)return;liveByRoom.delete(roomId);io.to(`room:${roomId}`).emit('live:ended',{roomId});io.to(`live:${roomId}`).emit('live:ended',{roomId})});
-
-  socket.on('admin:live-monitor', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!admin||admin.role!=='admin'||!live)return socket.emit('admin:live-monitor-ready',{roomId,active:false});if(!live.monitors)live.monitors=new Set();live.monitors.add(socket.id);socket.data.adminLiveMonitorRoom=roomId;for(const broadcasterSocket of live.broadcasters.keys())if(broadcasterSocket!==socket.id)io.to(broadcasterSocket).emit('live:viewer',{viewerSocketId:socket.id,roomId});socket.emit('admin:live-monitor-ready',{roomId,active:true,broadcasters:livePublic(live).broadcasters})}catch(e){logError(e,'admin:live-monitor')}});
-  socket.on('admin:live-unmonitor', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),live=liveByRoom.get(roomId);if(!admin||admin.role!=='admin')return;if(live?.monitors?.delete(socket.id))for(const b of live.broadcasters.keys())io.to(b).emit('live:viewer-left',{viewerSocketId:socket.id,roomId});socket.data.adminLiveMonitorRoom=null}catch(e){logError(e,'admin:live-unmonitor')}});
-  socket.on('admin:live-stop', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40);if(!admin||admin.role!=='admin')return;const live=liveByRoom.get(roomId);if(!live)return;liveByRoom.delete(roomId);io.to(`live:${roomId}`).emit('live:force-ended',{roomId,reason:'انتهى البث المباشر'});io.to(`room:${roomId}`).emit('live:ended',{roomId,forced:true});await logModeration(admin.id,'admin_live_stop','live',live.sessionId,roomId,{})}catch(e){logError(e,'admin:live-stop')}});
-  socket.on('admin:live-guest-remove', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),targetSocketId=cleanText(p?.targetSocketId,80);if(!admin||admin.role!=='admin')return;const live=liveByRoom.get(roomId),target=live?.broadcasters.get(targetSocketId);if(!live||!target||target.role==='host')return;live.broadcasters.delete(targetSocketId);io.to(targetSocketId).emit('live:guest-removed',{roomId,reason:'تم إنهاء مشاركتك'});io.to(`live:${roomId}`).emit('live:broadcaster-removed',{roomId,socketId:targetSocketId});io.to(`room:${roomId}`).emit('live:status',livePublic(live));await logModeration(admin.id,'admin_live_guest_remove','user',target.userId,roomId,{sessionId:live.sessionId})}catch(e){logError(e,'admin:live-guest-remove')}});
-  socket.on('admin:voice-kick', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),targetSocketId=cleanText(p?.targetSocketId,80);if(!admin||admin.role!=='admin')return;const state=voiceRooms.get(roomId),target=state?.participants.get(targetSocketId);if(!target)return;state.participants.delete(targetSocketId);io.to(targetSocketId).emit('voice:kicked',{roomId,reason:'تم إخراجك من الغرفة الصوتية'});io.sockets.sockets.get(targetSocketId)?.leave(`voice:${roomId}`);emitVoiceState(roomId);await logModeration(admin.id,'admin_voice_kick','user',target.user.id,roomId,{})}catch(e){logError(e,'admin:voice-kick')}});
-  socket.on('admin:voice-mute', async p=>{try{const admin=await socketUser(socket,p?.token),roomId=cleanText(p?.roomId,40),targetSocketId=cleanText(p?.targetSocketId,80);if(!admin||admin.role!=='admin')return;const state=voiceRooms.get(roomId),target=state?.participants.get(targetSocketId);if(!target)return;target.muted=true;io.to(targetSocketId).emit('voice:force-mute',{roomId,by:'admin'});emitVoiceState(roomId);await logModeration(admin.id,'admin_voice_mute','user',target.user.id,roomId,{})}catch(e){logError(e,'admin:voice-mute')}});
-  socket.on('disconnect',()=>removeSocketFromRtc(socket));
-});
+realtime.registerHandlers();
 
 app.get('/admin', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html'), e => e && next(e)));
 app.get('/', (_req, res, next) => res.sendFile(path.join(PUBLIC_DIR, 'index.html'), e => e && next(e)));
