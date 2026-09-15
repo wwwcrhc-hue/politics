@@ -6,7 +6,7 @@ function createHttpError(status, message) {
   return error;
 }
 
-function createRoomsService({ roomsRepository, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom }) {
+function createRoomsService({ roomsRepository, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom, livePublic }) {
   async function listRooms() {
     const rows = await roomsRepository.listRooms();
     return rows.map(r => ({
@@ -18,7 +18,8 @@ function createRoomsService({ roomsRepository, cleanText, makeId, now, rowTime, 
       owner: r.owner_user_id ? publicUser(userFromRow(r)) : null,
       createdAt: rowTime(r.created_at),
       posts: Number(r.posts),
-      messages: Number(r.messages)
+      messages: Number(r.messages),
+      live: getLiveByRoom().has(r.id) ? livePublic(getLiveByRoom().get(r.id)) : null
     }));
   }
 

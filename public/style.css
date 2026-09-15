@@ -76,3 +76,12 @@ body.liveMode #liveLikeBtn.liked{background:rgba(239,91,103,.16)!important;borde
 body.liveMode .liveStage{height:calc(100vh - 108px)!important;min-height:690px!important}
 @media(max-width:1180px){body.liveMode .videoCard{grid-template-rows:auto auto minmax(0,1fr) auto!important}body.liveMode .liveStage{height:clamp(640px,80vh,920px)!important;min-height:640px!important}}
 @media(max-width:760px){body.liveMode .liveStage{height:72vh!important;min-height:480px!important}}
+
+/* Active live indicators and calmer live sizing for viewers. */
+.roomLiveBadge{display:inline-grid;place-items:center;margin-right:8px;padding:2px 6px;border-radius:6px;background:#f03847;color:#fff;font-size:10px;font-style:normal;font-weight:900;line-height:1}
+.roomItem.hasLive{border-color:rgba(240,56,71,.48);background:rgba(240,56,71,.08)}
+.roomItem.hasLive small{color:#ff9aa3}
+body.liveMode .videoCard,body.liveMode .chatCard{height:auto!important;min-height:calc(100vh - 116px)!important}
+body.liveMode .liveStage{height:calc(100vh - 164px)!important;min-height:560px!important;max-height:calc(100vh - 128px)!important}
+@media(max-width:1180px){body.liveMode .videoCard,body.liveMode .chatCard{min-height:auto!important}body.liveMode .liveStage{height:clamp(520px,72vh,820px)!important;min-height:520px!important}}
+@media(max-width:760px){body.liveMode .liveStage{height:64vh!important;min-height:420px!important}}
