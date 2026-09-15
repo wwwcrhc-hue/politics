@@ -30,3 +30,20 @@ body.liveMode .liveStage.slots-6{grid-template-columns:repeat(3,minmax(0,1fr))!i
 .viewerRow .miniActions{flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:1180px){body.liveMode .shell{grid-template-columns:1fr!important}body.liveMode .livePane{grid-template-columns:1fr!important;grid-template-areas:"video" "chat" "voice"!important}body.liveMode .roomsPane,body.liveMode .feedPane{grid-column:1!important;position:static!important;height:auto!important}body.liveMode .roomsPane{grid-row:2!important}body.liveMode .feedPane{grid-row:3!important}body.liveMode .videoCard{min-height:auto!important;grid-template-columns:1fr!important;grid-template-areas:"head" "status" "actions" "stage" "people"!important}body.liveMode .videoCard .rtActions{position:relative!important;top:auto!important}body.liveMode .liveStage{height:clamp(520px,70vh,820px)!important;min-height:520px!important}body.liveMode .chatCard{min-height:380px!important}}
 @media(max-width:760px){body.liveMode .shell{display:flex!important;flex-direction:column!important;padding:10px!important}body.liveMode .livePane{display:flex!important;flex-direction:column!important;width:100%!important}body.liveMode .videoCard .rtActions{display:grid!important;grid-template-columns:1fr 1fr!important}body.liveMode .videoCard .rtActions select{grid-column:1/-1!important;width:100%!important}body.liveMode .liveStage{height:62vh!important;min-height:420px!important;width:100%!important}.liveStage.slots-2,.liveStage.slots-4,.liveStage.slots-6{grid-template-columns:1fr 1fr!important}body.liveMode .feedPane{display:block!important}}
+
+/* Live mode prioritizes video; voice controls move out of the live workspace. */
+body.liveMode .livePane{grid-template-columns:minmax(760px,1fr) minmax(280px,360px)!important;grid-template-areas:"video chat"!important}
+body.liveMode .voiceCard{display:none!important}
+body.liveMode .videoCard{grid-template-columns:minmax(0,1fr) minmax(210px,280px)!important;grid-template-areas:"head head" "status actions" "stage people"!important}
+body.liveMode .liveStage{height:calc(100vh - 190px)!important;min-height:620px!important}
+body.liveMode .videoCard .livePeople{max-height:calc(100vh - 220px)!important}
+@media(max-width:1180px){body.liveMode .livePane{grid-template-columns:1fr!important;grid-template-areas:"video" "chat"!important}body.liveMode .liveStage{height:clamp(560px,74vh,860px)!important;min-height:560px!important}}
+@media(max-width:760px){body.liveMode .videoCard{grid-template-columns:1fr!important;grid-template-areas:"head" "status" "actions" "stage" "people"!important}body.liveMode .liveStage{height:66vh!important;min-height:440px!important}}
+
+/* Keep the live video visually centered instead of pushed to an edge. */
+body.liveMode .videoCard{grid-template-columns:minmax(220px,280px) minmax(620px,1fr) minmax(220px,280px)!important;grid-template-areas:"head head head" "people status actions" "people stage actions"!important}
+body.liveMode .liveStage{justify-self:center!important;width:min(100%,1100px)!important}
+body.liveMode .videoCard .livePeople{grid-area:people!important}
+body.liveMode .videoCard .rtActions{grid-area:actions!important}
+body.liveMode .videoCard #liveStatus{text-align:center!important}
+@media(max-width:1180px){body.liveMode .videoCard{grid-template-columns:1fr!important;grid-template-areas:"head" "status" "stage" "actions" "people"!important}body.liveMode .liveStage{width:100%!important}}
