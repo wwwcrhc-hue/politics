@@ -16,6 +16,7 @@ const { createAdminRouter } = require('./src/routes/adminRoutes');
 const { createAuthRouter } = require('./src/routes/authRoutes');
 const { createChatRouter } = require('./src/routes/chatRoutes');
 const { createHealthRouter } = require('./src/routes/healthRoutes');
+const { createPostsRouter } = require('./src/routes/postsRoutes');
 const { createReportsRouter } = require('./src/routes/reportsRoutes');
 const { createRoomsRouter } = require('./src/routes/roomsRoutes');
 
@@ -231,129 +232,7 @@ app.use('/api/rooms', createRoomsRouter({ pool, io, auth, requireActiveUser, cle
 
 app.use('/api', createAuthRouter({ pool, bcrypt, cleanText, makeId, now, signToken, publicUser, userFromRow, auth, requireActiveUser }));
 
-app.get('/api/feed', async (req, res, next) => {
-  try {
-    const room = cleanText(req.query.room, 40);
-    const q = cleanText(req.query.q, 100);
-    const params = [''];
-    const where = [];
-    if (room) { params.push(room); where.push(`p.room_id = $${params.length}`); }
-    if (q) { params.push(`%${q}%`); where.push(`p.text ilike $${params.length}`); }
-    const { rows } = await pool.query(`
-      select p.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
-        count(distinct l.id) as likes_count,
-        count(distinct c.id) as comments_count,
-        bool_or(case when l.user_id = $1 then true else false end) as liked_by_me
-      from posts p
-      join users u on u.id = p.user_id
-      left join likes l on l.post_id = p.id
-      left join comments c on c.post_id = p.id
-      ${where.length ? `where ${where.join(' and ')}` : ''}
-      group by p.id, u.id
-      order by p.created_at desc
-      limit 250
-    `, params);
-    res.json(rows.map(postView));
-  } catch (e) { next(e); }
-});
-
-app.post('/api/posts', auth, requireActiveUser, upload.array('media', 4), async (req, res, next) => {
-  try {
-    const roomId = cleanText(req.body.roomId, 40);
-    const text = cleanText(req.body.text, 4000);
-    if (!(await roomExists(roomId))) return res.status(400).json({ error: 'الساحة غير موجودة' });
-    const files = (req.files || []).map(f => ({ url: `/uploads/${f.filename}`, type: f.mimetype.startsWith('image/') ? 'image' : 'video', mime: f.mimetype, name: cleanText(f.originalname, 120), size: f.size }));
-    if (!text && !files.length) return res.status(400).json({ error: 'اكتب منشورا أو أرفق صورة/فيديو' });
-    const post = { id: makeId('p'), userId: req.user.id, roomId, text, media: files, createdAt: now(), editedAt: null };
-    await pool.query(
-      'insert into posts (id, user_id, room_id, text, media, created_at, edited_at) values ($1, $2, $3, $4, $5::jsonb, $6, $7)',
-      [post.id, post.userId, post.roomId, post.text, JSON.stringify(post.media), post.createdAt, post.editedAt]
-    );
-    const view = await getPostForViewer(post.id, req.user.id);
-    io.emit('feed:new', { roomId, post: view });
-    res.status(201).json(view);
-  } catch (e) { next(e); }
-});
-
-app.patch('/api/posts/:id', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    const { rows } = await pool.query('select * from posts where id = $1', [req.params.id]);
-    const post = rows[0];
-    if (!post) return res.status(404).json({ error: 'المنشور غير موجود' });
-    if (post.user_id !== req.user.id && !(await userIsAdmin(req.user.id))) return res.status(403).json({ error: 'لا يمكنك تعديل هذا المنشور' });
-    await pool.query('update posts set text = $1, edited_at = $2 where id = $3', [cleanText(req.body.text, 4000), now(), req.params.id]);
-    io.emit('feed:changed', { roomId: post.room_id, postId: post.id });
-    res.json(await getPostForViewer(post.id, req.user.id));
-  } catch (e) { next(e); }
-});
-
-app.delete('/api/posts/:id', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    const { rows } = await pool.query('select * from posts where id = $1', [req.params.id]);
-    const post = rows[0];
-    if (!post) return res.status(404).json({ error: 'المنشور غير موجود' });
-    const room = await getRoomById(post.room_id);
-    if (post.user_id !== req.user.id && !(await canModerateRoom(req.user.id, room))) return res.status(403).json({ error: 'لا يمكنك حذف هذا المنشور' });
-    for (const m of (post.media || [])) {
-      if (m.url?.startsWith('/uploads/')) {
-        try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(m.url))); } catch {}
-      }
-    }
-    await pool.query('delete from posts where id = $1', [post.id]);
-    io.emit('feed:changed', { roomId: post.room_id, postId: post.id });
-    res.json({ ok: true });
-  } catch (e) { next(e); }
-});
-
-app.post('/api/posts/:id/like', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    const post = await pool.query('select 1 from posts where id = $1', [req.params.id]);
-    if (!post.rowCount) return res.status(404).json({ error: 'المنشور غير موجود' });
-    const deleted = await pool.query('delete from likes where post_id = $1 and user_id = $2', [req.params.id, req.user.id]);
-    const liked = deleted.rowCount === 0;
-    if (liked) await pool.query('insert into likes (id, post_id, user_id, created_at) values ($1, $2, $3, $4)', [makeId('l'), req.params.id, req.user.id, now()]);
-    const count = await pool.query('select count(*)::int as count from likes where post_id = $1', [req.params.id]);
-    res.json({ liked, count: count.rows[0].count });
-  } catch (e) { next(e); }
-});
-
-app.get('/api/posts/:id/comments', async (req, res, next) => {
-  try {
-    const { rows } = await pool.query(`
-      select c.*, u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at
-      from comments c
-      join users u on u.id = c.user_id
-      where c.post_id = $1
-      order by c.created_at asc
-    `, [req.params.id]);
-    res.json(rows.map(r => ({ ...commentFromRow(r), author: publicUser(userFromRow(r)) })));
-  } catch (e) { next(e); }
-});
-
-app.post('/api/posts/:id/comments', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    const post = await pool.query('select 1 from posts where id = $1', [req.params.id]);
-    if (!post.rowCount) return res.status(404).json({ error: 'المنشور غير موجود' });
-    const text = cleanText(req.body.text, 1500);
-    if (!text) return res.status(400).json({ error: 'اكتب التعليق' });
-    const comment = { id: makeId('c'), postId: req.params.id, userId: req.user.id, text, createdAt: now() };
-    await pool.query('insert into comments (id, post_id, user_id, text, created_at) values ($1, $2, $3, $4, $5)', [comment.id, comment.postId, comment.userId, comment.text, comment.createdAt]);
-    res.status(201).json({ ...comment, author: publicUser(await getUserById(req.user.id)) });
-  } catch (e) { next(e); }
-});
-
-app.delete('/api/comments/:id', auth, requireActiveUser, async (req, res, next) => {
-  try {
-    const { rows } = await pool.query('select c.*, p.room_id, r.owner_user_id from comments c join posts p on p.id = c.post_id join rooms r on r.id = p.room_id where c.id = $1', [req.params.id]);
-    const comment = rows[0];
-    if (!comment) return res.status(404).json({ error: 'التعليق غير موجود' });
-    const room = await getRoomById(comment.room_id);
-    if (comment.user_id !== req.user.id && !(await canModerateRoom(req.user.id, room))) return res.status(403).json({ error: 'لا يمكنك حذف هذا التعليق' });
-    await pool.query('delete from comments where id = $1', [req.params.id]);
-    io.emit('feed:changed', { roomId: comment.room_id, postId: comment.post_id });
-    res.json({ ok: true });
-  } catch (e) { next(e); }
-});
+app.use('/api', createPostsRouter({ pool, io, auth, requireActiveUser, upload, cleanText, makeId, now, postView, getPostForViewer, roomExists, getRoomById, userIsAdmin, canModerateRoom, commentFromRow, userFromRow, publicUser, getUserById, deleteUploadUrl }));
 
 app.use('/api', createReportsRouter({ pool, auth, requireActiveUser, requireAdmin, cleanText, makeId, now, rowTime, logModeration }));
 
