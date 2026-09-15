@@ -92,7 +92,7 @@ async function leaveVoice(){if(currentRoom)socket.emit('voice:leave',{roomId:cur
 $('#joinVoiceBtn').onclick=joinVoice; $('#leaveVoiceBtn').onclick=leaveVoice; $('#muteBtn').onclick=()=>{if(!voiceStream)return;voiceMuted=!voiceMuted;voiceStream.getAudioTracks().forEach(t=>t.enabled=!voiceMuted);$('#muteBtn').textContent=voiceMuted?'فتح الميكروفون':'كتم الميكروفون';};
 socket.on('voice:peers',async d=>{if(d.roomId!==currentRoom)return;for(const id of d.peers)await createVoiceOffer(id);}); socket.on('voice:user-left',d=>{voicePeers.get(d.socketId)?.close();voicePeers.delete(d.socketId);document.getElementById(`audio-${d.socketId}`)?.remove();}); socket.on('voice:count',d=>{if(d.roomId===currentRoom)$('#voiceCount').textContent=d.count;}); socket.on('voice:error',d=>toast(d.error));
 
-async function startLive(){if(!me)return openModal();if(!canAct())return toast('حسابك لا يملك صلاحية بدء البث حاليًا');if(!currentRoom)return toast('اختر ساحة أولًا');try{liveStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});liveMuted=false;liveHost=true;liveBroadcaster=true;liveMessages=[];renderLiveChat([]);showLocalLive();$('#liveStatus').textContent='أنت تبث الآن';updateLiveActionButtons();socket.emit('live:start',{token,roomId:currentRoom});}catch(e){toast('تعذر تشغيل الكاميرا/الميكروفون: '+e.message);}}
+async function startLive(){if(!me)return openModal();if(!canAct())return toast('حسابك لا يملك صلاحية بدء البث حاليًا');if(!currentRoom)return toast('اختر ساحة أولًا');if(activeLive)return toast('يوجد بث مباشر قائم في هذه الساحة الآن');try{liveStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});liveMuted=false;liveHost=true;liveBroadcaster=true;liveMessages=[];renderLiveChat([]);showLocalLive();$('#liveStatus').textContent='أنت تبث الآن';updateLiveActionButtons();socket.emit('live:start',{token,roomId:currentRoom});}catch(e){toast('تعذر تشغيل الكاميرا/الميكروفون: '+e.message);}}
 function updateLiveStageLayout(){const stage=$('#liveStage');const count=stage.querySelectorAll('video:not(.hidden)').length;stage.classList.remove('slots-1','slots-2','slots-4','slots-6');stage.classList.add(count<=1?'slots-1':count<=2?'slots-2':count<=4?'slots-4':'slots-6');document.body.classList.toggle('liveMode',!!currentRoom&&(liveBroadcaster||liveWatching));}
 function showLocalLive(){if(!liveStream)return;const v=$('#liveVideo');v.srcObject=liveStream;v.muted=true;v.className='liveVideo liveTile';v.classList.remove('hidden');updateLiveStageLayout();}
 function removeLiveVideo(id){document.getElementById(`live-remote-${id}`)?.remove();updateLiveStageLayout();}
@@ -107,8 +107,10 @@ function requestLiveStatus(){if(currentRoom)socket.emit('live:status-request',{r
 function updateLiveActionButtons(){
   const canStartLive=canAct()&&!!currentRoom&&!currentRoomPower.banned&&!activeLive&&!liveBroadcaster;
   const broadcasting=liveHost||liveBroadcaster;
-  $('#startLiveBtn').classList.toggle('hidden',broadcasting||!!activeLive);
+  $('#startLiveBtn').classList.toggle('hidden',broadcasting||liveWatching);
   $('#startLiveBtn').disabled=!canStartLive;
+  $('#startLiveBtn').textContent=activeLive&&!broadcasting?'بدء بث مباشر':'ابدأ بث فيديو';
+  $('#startLiveBtn').title=activeLive&&!broadcasting?'يوجد بث مباشر قائم في هذه الساحة الآن':'';
   $('#watchLiveBtn').classList.toggle('hidden',!activeLive||broadcasting);
   $('#liveLikeBtn').classList.toggle('hidden',!activeLive&&!broadcasting);
   $('#liveLikeBtn').textContent=`إعجاب ${activeLive?.likeCount||0}`;
