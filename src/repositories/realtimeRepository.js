@@ -10,7 +10,16 @@ function createRealtimeRepository({ pool }) {
     return rows[0]?.id || '';
   }
 
-  return { createRoomMessage, findUserIdByUsername };
+  async function banRoomUser({ id, roomId, userId, createdAt }) {
+    await pool.query(
+      `insert into room_members (id,room_id,user_id,role,status,created_at)
+       values ($1,$2,$3,'member','banned',$4)
+       on conflict (room_id,user_id) do update set status='banned'`,
+      [id, roomId, userId, createdAt]
+    );
+  }
+
+  return { createRoomMessage, findUserIdByUsername, banRoomUser };
 }
 
 module.exports = { createRealtimeRepository };
