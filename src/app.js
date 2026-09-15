@@ -101,12 +101,15 @@ app.post('/api/live/:roomId/topic-media', auth, requireActiveUser, upload.single
       return res.status(403).json({ error: 'صاحب البث فقط يستطيع تغيير موضوع الحوار' });
     }
     if (!req.file) return res.status(400).json({ error: 'اختر صورة أو فيديو لعرضه في البث' });
+    const uploadedTitle = cleanText(req.body?.title, 120);
+    if (uploadedTitle) live.topicTitle = uploadedTitle;
     const previous = live.topicMedia;
     const media = { url: `/uploads/${req.file.filename}`, type: req.file.mimetype.startsWith('image/') ? 'image' : 'video', mime: req.file.mimetype, name: cleanText(req.file.originalname, 120), size: req.file.size };
     live.topicMedia = media;
-    live.topicPlayback = { playing: true, muted: true };
+    live.topicPlayback = { playing: true, muted: false };
     if (previous?.url) deleteUploadUrl(previous.url);
     io.to(`live:${roomId}`).emit('live:topic-media', { roomId, media });
+    io.to(`live:${roomId}`).emit('live:title', { roomId, title: live.topicTitle || '' });
     io.to(`room:${roomId}`).emit('live:status', realtime.livePublic(live));
     io.emit('rooms:live-status', { roomId, active: true, live: realtime.livePublic(live) });
     res.json({ ok: true, media });
