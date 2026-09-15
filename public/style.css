@@ -57,3 +57,11 @@ body.liveMode .chatSend input{min-width:0!important}
 body.liveMode .livePane{align-items:start!important}
 body.liveMode .videoCard,body.liveMode .chatCard{height:calc(100vh - 112px)!important}
 @media(max-width:1180px){body.liveMode .videoCard,body.liveMode .chatCard{height:auto!important;max-height:none!important}body.liveMode .chatCard{min-height:420px!important}}
+
+/* Remove the status row gap so the live video starts high and centered. */
+body.liveMode .videoCard{grid-template-rows:auto minmax(0,1fr)!important;grid-template-areas:"head head head" "people stage actions"!important}
+body.liveMode .videoCard #liveStatus{display:none!important}
+body.liveMode .videoCard .rtActions,body.liveMode .videoCard .livePeople{align-self:start!important}
+body.liveMode .liveStage{align-self:start!important;height:calc(100vh - 136px)!important;min-height:660px!important}
+@media(max-width:1180px){body.liveMode .videoCard{grid-template-areas:"head" "stage" "actions" "people"!important}body.liveMode .liveStage{height:clamp(600px,78vh,900px)!important;min-height:600px!important}}
+@media(max-width:760px){body.liveMode .liveStage{height:70vh!important;min-height:460px!important}}
