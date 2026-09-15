@@ -8,7 +8,7 @@ let currentRoomPower = { role:'guest', canModerate:false, canManage:false, banne
 let voiceParticipants = [];
 let voiceStream = null, voiceMuted = false;
 const voicePeers = new Map();
-let liveStream = null, liveHost = false, liveBroadcaster = false, activeLive = null;
+let liveStream = null, liveHost = false, liveBroadcaster = false, liveMuted = false, activeLive = null;
 let liveInviteCandidates = [];
 const livePeers = new Map();
 const liveViewerPeers = new Map();
@@ -82,20 +82,29 @@ async function leaveVoice(){if(currentRoom)socket.emit('voice:leave',{roomId:cur
 $('#joinVoiceBtn').onclick=joinVoice; $('#leaveVoiceBtn').onclick=leaveVoice; $('#muteBtn').onclick=()=>{if(!voiceStream)return;voiceMuted=!voiceMuted;voiceStream.getAudioTracks().forEach(t=>t.enabled=!voiceMuted);$('#muteBtn').textContent=voiceMuted?'فتح الميكروفون':'كتم الميكروفون';};
 socket.on('voice:peers',async d=>{if(d.roomId!==currentRoom)return;for(const id of d.peers)await createVoiceOffer(id);}); socket.on('voice:user-left',d=>{voicePeers.get(d.socketId)?.close();voicePeers.delete(d.socketId);document.getElementById(`audio-${d.socketId}`)?.remove();}); socket.on('voice:count',d=>{if(d.roomId===currentRoom)$('#voiceCount').textContent=d.count;}); socket.on('voice:error',d=>toast(d.error));
 
-async function startLive(){if(!me)return openModal();if(!canAct())return toast('حسابك لا يملك صلاحية بدء البث حاليًا');if(!currentRoom)return toast('اختر ساحة أولًا');try{liveStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});liveHost=true;liveBroadcaster=true;showLocalLive();$('#startLiveBtn').classList.add('hidden');$('#stopLiveBtn').classList.remove('hidden');$('#inviteGuestBtn').classList.remove('hidden');$('#liveStatus').textContent='أنت تبث الآن';socket.emit('live:start',{token,roomId:currentRoom});}catch(e){toast('تعذر تشغيل الكاميرا/الميكروفون: '+e.message);}}
+async function startLive(){if(!me)return openModal();if(!canAct())return toast('حسابك لا يملك صلاحية بدء البث حاليًا');if(!currentRoom)return toast('اختر ساحة أولًا');try{liveStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});liveMuted=false;liveHost=true;liveBroadcaster=true;showLocalLive();$('#liveStatus').textContent='أنت تبث الآن';updateLiveActionButtons();socket.emit('live:start',{token,roomId:currentRoom});}catch(e){toast('تعذر تشغيل الكاميرا/الميكروفون: '+e.message);}}
 function showLocalLive(){if(!liveStream)return;const v=$('#liveVideo');v.srcObject=liveStream;v.muted=true;v.classList.remove('hidden');}
 function removeLiveVideo(id){document.getElementById(`live-remote-${id}`)?.remove();}
 function attachRemoteLive(id,stream){let v=document.getElementById(`live-remote-${id}`);if(!v){v=document.createElement('video');v.id=`live-remote-${id}`;v.className=liveBroadcaster?'remoteLive liveGuestTile':'remoteLive liveMainRemote';v.autoplay=true;v.playsInline=true;$('#liveStage').appendChild(v);}v.srcObject=stream;}
 function clearRemoteLive(){document.querySelectorAll('.remoteLive').forEach(v=>v.remove());for(const pc of liveViewerPeers.values())pc.close();liveViewerPeers.clear();}
-async function stopLive(){if(!liveHost)return;if(currentRoom)socket.emit('live:stop',{roomId:currentRoom});for(const pc of livePeers.values())pc.close();livePeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveHost=false;liveBroadcaster=false;activeLive=null;clearRemoteLive();$('#liveVideo').srcObject=null;$('#liveVideo').classList.add('hidden');$('#stopLiveBtn').classList.add('hidden');$('#inviteGuestBtn').classList.add('hidden');updateLiveActionButtons();renderLiveParticipants();}
-async function leaveLiveGuest(){if(!liveBroadcaster||liveHost)return;if(currentRoom)socket.emit('live:guest-leave',{token,roomId:currentRoom});for(const pc of livePeers.values())pc.close();livePeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveBroadcaster=false;clearRemoteLive();$('#liveVideo').srcObject=null;$('#liveVideo').classList.add('hidden');$('#leaveGuestBtn').classList.add('hidden');$('#liveStatus').textContent=activeLive?'مشاهدة البث المباشر':'لا يوجد بث مباشر الآن';}
-async function cleanupForcedLive(){for(const pc of livePeers.values())pc.close();livePeers.clear();for(const pc of liveViewerPeers.values())pc.close();liveViewerPeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveHost=false;liveBroadcaster=false;activeLive=null;$('#liveVideo').srcObject=null;$('#liveVideo').classList.add('hidden');clearRemoteLive();$('#stopLiveBtn').classList.add('hidden');$('#inviteGuestBtn').classList.add('hidden');$('#leaveGuestBtn').classList.add('hidden');updateLiveActionButtons();renderLiveParticipants();}
+async function stopLive(){if(!liveHost)return;if(currentRoom)socket.emit('live:stop',{roomId:currentRoom});for(const pc of livePeers.values())pc.close();livePeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveMuted=false;liveHost=false;liveBroadcaster=false;activeLive=null;clearRemoteLive();$('#liveVideo').srcObject=null;$('#liveVideo').classList.add('hidden');updateLiveActionButtons();renderLiveParticipants();}
+async function leaveLiveGuest(){if(!liveBroadcaster||liveHost)return;if(currentRoom)socket.emit('live:guest-leave',{token,roomId:currentRoom});for(const pc of livePeers.values())pc.close();livePeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveMuted=false;liveBroadcaster=false;clearRemoteLive();$('#liveVideo').srcObject=null;$('#liveVideo').classList.add('hidden');$('#liveStatus').textContent=activeLive?'مشاهدة البث المباشر':'لا يوجد بث مباشر الآن';updateLiveActionButtons();}
+async function cleanupForcedLive(){for(const pc of livePeers.values())pc.close();livePeers.clear();for(const pc of liveViewerPeers.values())pc.close();liveViewerPeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveMuted=false;liveHost=false;liveBroadcaster=false;activeLive=null;$('#liveVideo').srcObject=null;$('#liveVideo').classList.add('hidden');clearRemoteLive();updateLiveActionButtons();renderLiveParticipants();}
 async function watchLive(){if(!currentRoom)return;socket.emit('live:watch',{roomId:currentRoom});$('#watchLiveBtn').classList.add('hidden');$('#liveStatus').textContent='جاري الاتصال بالبث...';}
 async function stopWatchingLive(){if(currentRoom&&!liveBroadcaster)socket.emit('live:unwatch',{roomId:currentRoom});for(const pc of liveViewerPeers.values())pc.close();liveViewerPeers.clear();if(!liveBroadcaster){clearRemoteLive();}}
 function requestLiveStatus(){if(currentRoom)socket.emit('live:status-request',{roomId:currentRoom});}
 function updateLiveActionButtons(){
   const canStartLive=canAct()&&!!currentRoom&&!currentRoomPower.banned&&!activeLive&&!liveBroadcaster;
-  $('#startLiveBtn').classList.toggle('hidden',!canStartLive);
+  const broadcasting=liveHost||liveBroadcaster;
+  $('#startLiveBtn').classList.toggle('hidden',broadcasting||!!activeLive);
+  $('#startLiveBtn').disabled=!canStartLive;
+  $('#watchLiveBtn').classList.toggle('hidden',!activeLive||broadcasting);
+  $('#liveMuteBtn').classList.toggle('hidden',!broadcasting);
+  $('#liveMuteBtn').textContent=liveMuted?'فتح الصوت':'كتم الصوت';
+  $('#liveShareBtn').classList.toggle('hidden',!currentRoom);
+  $('#stopLiveBtn').classList.toggle('hidden',!liveHost);
+  $('#leaveGuestBtn').classList.toggle('hidden',!liveBroadcaster||liveHost);
+  $('#inviteGuestBtn').classList.toggle('hidden',!liveHost);
   $('#liveGuestSelect').classList.toggle('hidden',!liveHost);
   if(liveHost)loadLiveGuestOptions();
   if(!activeLive&&!liveBroadcaster){
@@ -106,6 +115,8 @@ function updateLiveActionButtons(){
     else $('#liveStatus').textContent='لا يوجد بث مباشر الآن';
   }
 }
+function toggleLiveMute(){if(!liveStream)return;liveMuted=!liveMuted;liveStream.getAudioTracks().forEach(t=>t.enabled=!liveMuted);updateLiveActionButtons();}
+async function shareLive(){if(!currentRoom)return toast('اختر ساحة أولًا');const link=`${location.origin}/?room=${encodeURIComponent(currentRoom)}`;try{await navigator.clipboard.writeText(link);toast('تم نسخ رابط البث');}catch{prompt('انسخ رابط البث:',link);}}
 function renderLiveGuestOptions(){
   const select=$('#liveGuestSelect');
   const options=liveInviteCandidates.filter(u=>u.id!==me?.id);
@@ -118,7 +129,7 @@ function loadLiveGuestOptions(){
 }
 function renderLiveParticipants(){const list=activeLive?.broadcasters||[];$('#liveViewerCount').textContent=activeLive?.viewerCount||0;$('#liveParticipants').innerHTML=list.map(b=>`<div class="participant"><span class="miniAvatar">${esc((b.displayName||'م').slice(0,1))}</span><div class="meta"><b>${esc(b.displayName||'مشارك')}</b><small>${b.role==='host'?'صاحب البث':'ضيف على البث'}</small></div>${liveHost&&b.role==='guest'?`<div class="miniActions"><button class="removeLiveGuest danger" data-socket="${esc(b.socketId)}">إزالة</button></div>`:''}</div>`).join('');document.querySelectorAll('.removeLiveGuest').forEach(btn=>btn.onclick=()=>socket.emit('live:guest-remove',{token,roomId:currentRoom,targetSocketId:btn.dataset.socket}));}
 function inviteLiveGuest(){if(!liveHost)return;const targetUserId=$('#liveGuestSelect').value;if(!targetUserId)return toast('اختر مستخدمًا من القائمة');socket.emit('live:invite',{token,roomId:currentRoom,targetUserId});}
-$('#startLiveBtn').onclick=startLive; $('#watchLiveBtn').onclick=watchLive; $('#stopLiveBtn').onclick=stopLive; $('#inviteGuestBtn').onclick=inviteLiveGuest; $('#leaveGuestBtn').onclick=leaveLiveGuest;
+$('#startLiveBtn').onclick=startLive; $('#watchLiveBtn').onclick=watchLive; $('#stopLiveBtn').onclick=stopLive; $('#inviteGuestBtn').onclick=inviteLiveGuest; $('#leaveGuestBtn').onclick=leaveLiveGuest; $('#liveMuteBtn').onclick=toggleLiveMute; $('#liveShareBtn').onclick=shareLive;
 socket.on('live:invite-candidates',d=>{if(d.roomId!==currentRoom)return;liveInviteCandidates=d.users||[];renderLiveGuestOptions();});
 socket.on('live:invite-candidates-changed',d=>{if(d.roomId===currentRoom&&liveHost)loadLiveGuestOptions();});
 socket.on('live:invite-result',d=>toast(d.ok?'تم إرسال دعوة الظهور في البث':'المستخدم غير متصل بهذه الساحة الآن'));

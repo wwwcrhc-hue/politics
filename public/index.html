@@ -71,16 +71,18 @@
       <section class="liveCard videoCard">
         <div class="cardTitle"><div><span class="livePill">LIVE</span><b>البث المباشر</b></div><span class="counter" id="liveViewerCount">0</span></div>
         <p class="muted" id="liveStatus">لا يوجد بث مباشر الآن</p>
-        <div class="liveStage" id="liveStage"><video id="liveVideo" class="liveVideo hidden" autoplay playsinline controls></video></div>
-        <div class="livePeople" id="liveParticipants"></div>
         <div class="rtActions">
           <button id="startLiveBtn" class="primary">ابدأ بث فيديو</button>
           <button id="watchLiveBtn" class="hidden">مشاهدة البث</button>
+          <button id="liveMuteBtn" class="hidden">كتم الصوت</button>
+          <button id="liveShareBtn" class="hidden">مشاركة البث</button>
           <select id="liveGuestSelect" class="hidden"></select>
           <button id="inviteGuestBtn" class="hidden">دعوة ضيف</button>
           <button id="leaveGuestBtn" class="danger hidden">مغادرة المشاركة</button>
           <button id="stopLiveBtn" class="danger hidden">إنهاء البث</button>
         </div>
+        <div class="liveStage" id="liveStage"><video id="liveVideo" class="liveVideo hidden" autoplay playsinline controls></video></div>
+        <div class="livePeople" id="liveParticipants"></div>
       </section>
 
       <section class="chatCard">
