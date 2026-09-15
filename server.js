@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { Pool } = require('pg');
 const { Server } = require('socket.io');
+const { createHealthRouter } = require('./src/routes/healthRoutes');
 
 const APP_NAME = 'ساحات سياسية';
 const VERSION = '7.0.0';
@@ -219,12 +220,7 @@ app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 app.use('/uploads', express.static(UPLOAD_DIR, { fallthrough: false, maxAge: '1h', setHeaders: res => res.setHeader('X-Content-Type-Options', 'nosniff') }));
 app.use(express.static(PUBLIC_DIR, { maxAge: 0 }));
 
-app.get('/api/health', async (_req, res, next) => {
-  try {
-    await pool.query('select 1');
-    res.json({ ok: true, app: APP_NAME, version: VERSION, storage: 'postgres', time: now(), port: server.address()?.port || null });
-  } catch (e) { next(e); }
-});
+app.use('/api/health', createHealthRouter({ pool, appName: APP_NAME, version: VERSION, now, getPort: () => server.address()?.port || null }));
 
 app.get('/api/rooms', async (_req, res, next) => {
   try {
