@@ -77,6 +77,74 @@ const upload = createUpload({ uploadDir: env.UPLOAD_DIR });
 const deleteUploadUrl = createDeleteUploadUrl({ uploadDir: env.UPLOAD_DIR });
 
 const realtime = createRealtimeService({ io, pool, cleanText, decodeSocketToken, getUserById, getRoomById, roomPower, publicUser, makeId, now, logError, logModeration });
+const newsCache = { at: 0, items: [] };
+const NEWS_SOURCES = [
+  { name: 'Al Arabiya', lang: 'ar', url: 'https://www.alarabiya.net/.mrss/ar.xml' },
+  { name: 'Al Hadath', lang: 'ar', url: 'https://www.alhadath.net/.mrss/alhadath.xml' },
+  { name: 'Al Jazeera', lang: 'en', url: 'https://www.aljazeera.com/xml/rss/all.xml' },
+  { name: 'BBC World', lang: 'en', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+  { name: 'France 24 Arabic', lang: 'ar', url: 'https://www.france24.com/ar/rss' },
+  { name: 'France 24 English', lang: 'en', url: 'https://www.france24.com/en/rss' },
+  { name: 'The Guardian World', lang: 'en', url: 'https://www.theguardian.com/world/rss' },
+  { name: 'UN News', lang: 'en', url: 'https://news.un.org/feed/subscribe/en/news/all/rss.xml' },
+  { name: 'Euronews', lang: 'multi', url: 'https://www.euronews.com/rss?level=theme&name=news' },
+  { name: 'CBC World', lang: 'en', url: 'https://www.cbc.ca/webfeed/rss/rss-topstories' }
+];
+
+function decodeXmlText(value = '') {
+  return String(value)
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tagValue(block, tag) {
+  return decodeXmlText(block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
+}
+
+function parseNewsFeed(xml, source) {
+  const blocks = [...String(xml || '').matchAll(/<item[\s\S]*?<\/item>|<entry[\s\S]*?<\/entry>/gi)].map(m => m[0]);
+  return blocks.slice(0, 8).map(block => {
+    const title = tagValue(block, 'title');
+    const link = tagValue(block, 'link') || decodeXmlText(block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1] || '');
+    const summary = tagValue(block, 'description') || tagValue(block, 'summary') || tagValue(block, 'content');
+    const published = tagValue(block, 'pubDate') || tagValue(block, 'updated') || tagValue(block, 'published') || '';
+    return title && link ? { id: `${source.name}:${link}`, source: source.name, lang: source.lang, title, link, summary: summary.slice(0, 220), published } : null;
+  }).filter(Boolean);
+}
+
+async function fetchPoliticalNews() {
+  if (Date.now() - newsCache.at < 10 * 60 * 1000 && newsCache.items.length) return newsCache.items;
+  const batches = await Promise.allSettled(NEWS_SOURCES.map(async source => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6500);
+    try {
+      const response = await fetch(source.url, { signal: controller.signal, headers: { 'User-Agent': `${env.APP_NAME}/7 RSS reader` } });
+      if (!response.ok) throw new Error(`RSS ${response.status}`);
+      return parseNewsFeed(await response.text(), source);
+    } finally {
+      clearTimeout(timer);
+    }
+  }));
+  const seen = new Set();
+  const items = batches.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+    .filter(item => {
+      const key = item.link.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => new Date(b.published || 0) - new Date(a.published || 0))
+    .slice(0, 36);
+  if (items.length) Object.assign(newsCache, { at: Date.now(), items });
+  return newsCache.items;
+}
 
 app.disable('x-powered-by');
 app.use(securityHeaders);
@@ -86,6 +154,12 @@ app.use('/uploads', express.static(env.UPLOAD_DIR, { fallthrough: false, maxAge:
 app.use(express.static(env.PUBLIC_DIR, { maxAge: 0 }));
 
 app.use('/api/health', createHealthRouter({ pool, appName: env.APP_NAME, version: env.VERSION, now, getPort: () => server.address()?.port || null }));
+
+app.get('/api/political-news', async (_req, res, next) => {
+  try {
+    res.json({ updatedAt: now(), sources: NEWS_SOURCES.map(({ name, lang }) => ({ name, lang })), items: await fetchPoliticalNews() });
+  } catch (e) { next(e); }
+});
 
 app.post('/api/live/:roomId/topic-media', auth, requireActiveUser, upload.single('media'), async (req, res, next) => {
   try {
@@ -274,6 +348,33 @@ app.post('/api/notifications/read', auth, requireActiveUser, async (req, res, ne
   try {
     await pool.query('update notifications set read_at = coalesce(read_at, $2) where user_id = $1', [req.user.id, now()]);
     res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+app.get('/api/me/conversations', auth, requireActiveUser, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(`
+      with accepted as (
+        select case when from_user_id = $1 then to_user_id else from_user_id end as user_id, updated_at
+        from message_requests
+        where status = 'accepted' and (from_user_id = $1 or to_user_id = $1)
+      ), last_messages as (
+        select distinct on (case when from_user_id = $1 then to_user_id else from_user_id end)
+          case when from_user_id = $1 then to_user_id else from_user_id end as user_id,
+          text, created_at
+        from direct_messages
+        where from_user_id = $1 or to_user_id = $1
+        order by case when from_user_id = $1 then to_user_id else from_user_id end, created_at desc
+      )
+      select a.updated_at, lm.text as last_text, lm.created_at as last_message_at,
+        u.id, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.status, u.created_at as user_created_at
+      from accepted a
+      join users u on u.id = a.user_id
+      left join last_messages lm on lm.user_id = a.user_id
+      order by coalesce(lm.created_at, a.updated_at) desc
+      limit 80
+    `, [req.user.id]);
+    res.json(rows.map(r => ({ user: publicUser(userFromRow(r)), lastText: r.last_text || '', lastMessageAt: rowTime(r.last_message_at || r.updated_at) })));
   } catch (e) { next(e); }
 });
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#070a0f">
   <title>ساحات سياسية</title>
-  <link rel="stylesheet" href="/style.css?v=7.13-live">
+  <link rel="stylesheet" href="/style.css?v=7.14-live">
 </head>
 <body class="userApp">
   <header class="topbar">
@@ -18,13 +18,16 @@
       <button id="homeBtn">الرئيسية</button>
       <button id="loginBtn" class="primary">دخول</button>
       <button id="adminPageBtn" class="adminLink hidden">مركز الإدارة المستقل</button>
+      <button id="messagesBtn" class="hidden">الرسائل</button>
       <button id="notificationsBtn" class="hidden">التنبيهات <span id="notificationCount" class="topBadge hidden">0</span></button>
       <button id="profileBtn" class="hidden">حسابي</button>
       <button id="logoutBtn" class="hidden">خروج</button>
+      <select id="languageSelect" class="languageSelect" title="Language"></select>
     </nav>
   </header>
 
   <section class="liveTicker hidden" id="liveTicker"></section>
+  <section class="newsStrip hidden" id="newsStrip"></section>
 
   <div class="shell">
     <aside class="roomsPane">
@@ -112,10 +115,10 @@
   <div class="modal hidden" id="profileModal"><div class="modalCard profileCard"><button class="close" id="closeProfile">×</button><div class="profileHead"><span class="profileAvatar" id="profileAvatar">أ</span><div><span class="eyebrow">الصفحة الشخصية</span><h2 id="profileTitle">حسابي</h2><p id="profileBioView" class="muted"></p><div id="profileStats" class="profileStats"></div></div></div><div class="profileActions hidden" id="profileActions"><button id="followUserBtn" class="primary">متابعة</button><button id="requestMessageBtn">طلب مراسلة</button><button id="openMessagesBtn">الرسائل</button></div><div class="profileForm" id="profileForm"><input id="profileName" maxlength="40" placeholder="الاسم الظاهر"><textarea id="profileBio" maxlength="240" placeholder="نبذة قصيرة"></textarea><label class="filePick">صورة البروفايل<input id="profileImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><input id="currentPassword" maxlength="128" type="password" placeholder="كلمة المرور الحالية"><input id="newPassword" maxlength="128" type="password" placeholder="كلمة المرور الجديدة"><button class="primary" id="saveProfileBtn">حفظ الحساب</button></div><h3>منشوراتي</h3><div class="profilePosts" id="profilePosts"></div></div></div>
 
   <div class="modal hidden" id="socialModal"><div class="modalCard profileCard"><button class="close" id="closeSocial">×</button><span class="eyebrow">التواصل</span><h2>المتابعون والتنبيهات</h2><div class="socialSearch"><input id="socialUserSearch" maxlength="40" placeholder="ابحث باسم المستخدم لإرسال متابعة أو طلب مراسلة"><button class="primary" id="socialSearchBtn">بحث</button></div><div id="socialSearchResults" class="socialSearchResults"></div><div class="socialGrid"><section><h3>طلبات المراسلة</h3><div id="messageRequestsList"></div></section><section><h3>التنبيهات</h3><div id="notificationsList"></div></section><section><h3>يتابعونك</h3><div id="followersList"></div></section><section><h3>تتابعهم</h3><div id="followingList"></div></section></div></div></div>
-  <div class="modal hidden" id="messagesModal"><div class="modalCard profileCard"><button class="close" id="closeMessages">×</button><span class="eyebrow">رسائل خاصة</span><h2 id="messagesTitle">المراسلة</h2><div class="directMessages" id="directMessages"></div><div class="chatSend"><input id="directMessageInput" maxlength="1500" placeholder="اكتب رسالة خاصة..."><button class="primary" id="sendDirectMessageBtn">إرسال</button></div></div></div>
+  <div class="modal hidden" id="messagesModal"><div class="modalCard profileCard"><button class="close" id="closeMessages">×</button><span class="eyebrow">رسائل خاصة</span><h2 id="messagesTitle">المراسلة</h2><div class="conversationList" id="conversationList"></div><div class="directMessages" id="directMessages"></div><div class="chatSend"><input id="directMessageInput" maxlength="1500" placeholder="اكتب رسالة خاصة..."><button class="primary" id="sendDirectMessageBtn">إرسال</button></div></div></div>
 
   <div class="toast hidden" id="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=7.13-live"></script>
+  <script src="/app.js?v=7.14-live"></script>
 </body>
 </html>
