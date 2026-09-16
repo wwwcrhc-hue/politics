@@ -23,7 +23,12 @@ const env = {
   LOG_DIR: path.join(ROOT_DIR, 'logs'),
   ERROR_LOG: path.join(ROOT_DIR, 'logs', 'error.log'),
   SCHEMA_FILE: path.join(ROOT_DIR, 'schema.sql'),
-  DATABASE_URL: process.env.DATABASE_URL || ''
+  DATABASE_URL: process.env.DATABASE_URL || '',
+  YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
+  YOUTUBE_LIVE_CACHE_TTL: process.env.YOUTUBE_LIVE_CACHE_TTL || '',
+  YOUTUBE_RESOLVER_BATCH_SIZE: process.env.YOUTUBE_RESOLVER_BATCH_SIZE || '',
+  YOUTUBE_RESOLVER_INTERVAL: process.env.YOUTUBE_RESOLVER_INTERVAL || '',
+  YOUTUBE_QUOTA_BUDGET: process.env.YOUTUBE_QUOTA_BUDGET || ''
 };
 
 module.exports = { env, normalizePort };

@@ -27,6 +27,36 @@
   </header>
 
   <section class="liveTicker hidden" id="liveTicker"></section>
+  <section class="globalChannels" id="globalChannels">
+    <div class="globalHead">
+      <div><span class="eyebrow">مركز سياسي عالمي</span><h2>مباشر حول العالم</h2></div>
+      <button id="refreshChannelsBtn">تحديث القنوات</button>
+    </div>
+    <div class="channelLiveRail" id="channelLiveRail"></div>
+    <div class="channelDirectory">
+      <div class="directoryHead"><b>قنوات إخبارية من حول العالم</b><span id="channelTotal" class="muted"></span></div>
+      <div class="channelFilters">
+        <input id="channelSearch" maxlength="80" placeholder="ابحث عن قناة أو دولة أو لغة">
+        <select id="channelRegion"><option value="">كل المناطق</option></select>
+        <select id="channelCountry"><option value="">كل الدول</option></select>
+        <select id="channelLanguage"><option value="">كل اللغات</option></select>
+        <button id="channelLiveOnly">المباشر فقط</button>
+      </div>
+      <div class="channelGrid" id="channelGrid"></div>
+      <button id="loadMoreChannels" class="hidden">عرض المزيد</button>
+    </div>
+  </section>
+  <section class="channelTheater hidden" id="channelTheater">
+    <div class="theaterHead"><div><b id="theaterChannelName"></b><small id="theaterChannelMeta"></small></div><div class="inline"><button id="minimizeChannelPlayer">تصغير</button><button id="closeChannelPlayer" class="danger">إغلاق</button></div></div>
+    <div class="youtubeFrame" id="youtubeFrame"></div>
+    <div class="theaterInfo"><h3 id="theaterLiveTitle"></h3><p id="theaterFallback" class="muted"></p><div class="inline"><button id="discussChannelBtn" class="primary">ناقش هذا البث</button><a id="openYoutubeBtn" target="_blank" rel="noopener">المشاهدة على YouTube</a><button id="muteChannelBtn">كتم القناة</button></div></div>
+  </section>
+  <section class="miniChannelPlayer hidden" id="miniChannelPlayer">
+    <div id="miniYoutubeFrame"></div>
+    <b id="miniChannelName"></b>
+    <button id="expandMiniPlayer">تكبير</button>
+    <button id="closeMiniPlayer">إغلاق</button>
+  </section>
   <section class="newsStrip hidden" id="newsStrip"></section>
 
   <div class="shell">

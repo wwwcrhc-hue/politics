@@ -16,12 +16,15 @@ const { securityHeaders } = require('./middleware/security');
 const { createAdminRouter } = require('./routes/adminRoutes');
 const { createAuthRouter } = require('./routes/authRoutes');
 const { createChatRouter } = require('./routes/chatRoutes');
+const { createChannelsRouter } = require('./routes/channelsRoutes');
 const { createHealthRouter } = require('./routes/healthRoutes');
 const { createPostsRouter } = require('./routes/postsRoutes');
 const { createReportsRouter } = require('./routes/reportsRoutes');
 const { createRoomsRouter } = require('./routes/roomsRoutes');
 const { createSharedRepository } = require('./repositories/sharedRepository');
+const { createChannelsRepository } = require('./repositories/channelsRepository');
 const { createRealtimeService } = require('./services/realtimeService');
+const { createYouTubeLiveResolver } = require('./services/youtubeLiveResolver');
 const { createRoomPermissionsService } = require('./services/roomPermissionsService');
 const { makeId } = require('./utils/id');
 const { createMappers } = require('./utils/mappers');
@@ -77,6 +80,8 @@ const upload = createUpload({ uploadDir: env.UPLOAD_DIR });
 const deleteUploadUrl = createDeleteUploadUrl({ uploadDir: env.UPLOAD_DIR });
 
 const realtime = createRealtimeService({ io, pool, cleanText, decodeSocketToken, getUserById, getRoomById, roomPower, publicUser, makeId, now, logError, logModeration });
+const channelsRepository = createChannelsRepository({ pool });
+const youtubeLiveResolver = createYouTubeLiveResolver({ channelsRepository, env, logError });
 const newsCache = { at: 0, items: [] };
 const NEWS_SOURCES = [
   { name: 'Al Arabiya', lang: 'ar', url: 'https://www.alarabiya.net/.mrss/ar.xml' },
@@ -449,6 +454,7 @@ app.use('/api', createReportsRouter({ pool, auth, requireActiveUser, requireAdmi
 app.use('/api', createChatRouter({ pool, io, auth, requireActiveUser, getRoomById, canModerateRoom, messageFromRow, userFromRow, publicUser }));
 
 app.use('/api/admin', createAdminRouter({ pool, auth, requireAdmin, cleanText, rowTime, userFromRow, publicUser, getLiveByRoom: () => realtime.liveByRoom, getVoiceRooms: () => realtime.voiceRooms, livePublic: realtime.livePublic }));
+app.use('/api', createChannelsRouter({ pool, auth, requireActiveUser, cleanText, jwt, jwtSecret: env.JWT_SECRET }));
 
 realtime.registerHandlers();
 
@@ -474,6 +480,7 @@ function startServer(port = env.START_PORT, attempt = 0) {
   };
   const onListening = () => {
     server.off('error', onError);
+    youtubeLiveResolver.start();
     const actual = server.address().port;
     console.log(`\n${env.APP_NAME} ${env.VERSION}\nhttp://localhost:${actual}\nفحص: http://localhost:${actual}/api/health\n`);
   };
@@ -483,6 +490,7 @@ function startServer(port = env.START_PORT, attempt = 0) {
 }
 
 function shutdown(done = () => process.exit(0)) {
+  youtubeLiveResolver.stop();
   io.close(() => server.close(() => pool.end(done)));
 }
 

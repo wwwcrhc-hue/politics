@@ -252,3 +252,38 @@ body.liveMode .livePeople .miniActions{max-width:100%!important;min-width:0!impo
 body.liveMode .livePeople .miniActions button{flex:0 1 auto!important;min-width:0!important;max-width:96px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 body.liveMode .livePeople .liveRoleBadge{margin-inline-start:0!important}
 body.liveMode .liveSpeakers>b,body.liveMode .liveViewers>b{display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+
+/* Global news channel hub on the home screen. */
+.globalChannels,.channelTheater{max-width:1680px;margin:14px auto 0;padding:14px 18px}
+.globalChannels{display:grid;gap:14px}
+.globalHead,.directoryHead,.theaterHead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.globalHead h2{margin:3px 0 0;font-size:22px}
+.channelLiveRail{display:flex;gap:10px;overflow-x:auto;padding:2px 0 8px;scroll-snap-type:x proximity}
+.channelCard{min-width:260px;max-width:330px;display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:stretch;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:#0b1018;scroll-snap-align:start}
+.channelCard img,.channelLogo{width:88px;height:88px;border-radius:12px;object-fit:cover;background:#121a28}
+.channelLogo{display:grid;place-items:center;color:var(--gold2);font-size:30px;font-weight:900}
+.channelBody{display:grid;gap:4px;min-width:0}
+.channelBody b,.channelBody small,.channelBody p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.channelBody p{margin:0;color:var(--muted);font-size:12px}
+.channelType{width:max-content;padding:2px 7px;border-radius:999px;background:rgba(123,167,255,.12);border:1px solid rgba(123,167,255,.25);color:#a8c4ff;font-size:10px;font-weight:900}
+.channelCard.isLive .channelType{background:#f03847;color:#fff;border-color:#f03847}
+.channelActions{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+.channelActions button{min-width:0;padding:6px 8px;font-size:11px;border-radius:9px}
+.channelDirectory{display:grid;gap:10px;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(180deg,rgba(18,23,34,.72),rgba(8,12,19,.88))}
+.channelFilters{display:grid;grid-template-columns:minmax(180px,1fr) repeat(3,minmax(120px,170px)) auto;gap:8px}
+.channelFilters input,.channelFilters select{min-width:0;border:1px solid var(--line);background:#090d14;color:var(--text);border-radius:11px;padding:10px;outline:none}
+.channelGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.channelGrid .channelCard{min-width:0;max-width:none}
+#loadMoreChannels{justify-self:center}
+.channelTheater{display:grid;gap:12px;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);background:#070a0f}
+.youtubeFrame{aspect-ratio:16/9;width:min(100%,980px);justify-self:center;border-radius:16px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.1)}
+.youtubeFrame iframe,#miniYoutubeFrame iframe{width:100%;height:100%;border:0;display:block}
+.theaterInfo{display:grid;gap:8px;max-width:980px;width:100%;justify-self:center}
+.theaterInfo h3{margin:0}
+.theaterInfo a{display:inline-grid;place-items:center;text-decoration:none;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:#151b27}
+.miniChannelPlayer{position:fixed;right:18px;bottom:18px;z-index:90;width:min(340px,calc(100vw - 28px));display:grid;grid-template-columns:120px minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(7,10,15,.94);box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+#miniYoutubeFrame{width:120px;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+.miniChannelPlayer b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.miniChannelPlayer button{padding:7px 9px;font-size:11px;border-radius:9px}
+@media(max-width:900px){.channelFilters{grid-template-columns:1fr 1fr}.channelFilters input{grid-column:1/-1}.miniChannelPlayer{right:10px;bottom:10px;grid-template-columns:100px minmax(0,1fr);}.miniChannelPlayer button{width:100%}}
+@media(max-width:620px){.globalChannels,.channelTheater{padding:12px 10px}.globalHead,.directoryHead,.theaterHead{align-items:flex-start;flex-direction:column}.channelCard{min-width:245px;grid-template-columns:74px minmax(0,1fr)}.channelCard img,.channelLogo{width:74px;height:74px}.channelFilters{grid-template-columns:1fr}.channelGrid{grid-template-columns:1fr}.miniChannelPlayer{grid-template-columns:1fr}#miniYoutubeFrame{width:100%}}

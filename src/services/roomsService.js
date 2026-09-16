@@ -15,6 +15,8 @@ function createRoomsService({ roomsRepository, cleanText, makeId, now, rowTime, 
       description: r.description,
       status: r.status || 'active',
       ownerUserId: r.owner_user_id || null,
+      sourceChannelId: r.source_channel_id || null,
+      sourceYoutubeVideoId: r.source_youtube_video_id || '',
       owner: r.owner_user_id ? publicUser(userFromRow(r)) : null,
       createdAt: rowTime(r.created_at),
       posts: Number(r.posts),
@@ -27,7 +29,9 @@ function createRoomsService({ roomsRepository, cleanText, makeId, now, rowTime, 
     const name = cleanText(body.name, 60);
     const description = cleanText(body.description, 240);
     if (name.length < 3) throw createHttpError(400, 'اسم الغرفة يجب أن يكون 3 أحرف على الأقل');
-    const room = { id: makeId('room'), name, description, ownerUserId: userId, createdAt: now() };
+    const sourceChannelId = cleanText(body.sourceChannelId, 80);
+    const sourceYoutubeVideoId = cleanText(body.sourceYoutubeVideoId, 80);
+    const room = { id: makeId('room'), name, description, ownerUserId: userId, sourceChannelId, sourceYoutubeVideoId, createdAt: now() };
     await roomsRepository.createRoom(room);
     return { ...room, owner: publicUser(fullUser), posts: 0, messages: 0 };
   }

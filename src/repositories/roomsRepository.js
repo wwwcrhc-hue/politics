@@ -3,7 +3,7 @@
 function createRoomsRepository({ pool, userFromRow }) {
   async function listRooms() {
     const { rows } = await pool.query(`
-      select r.id, r.name, r.description, r.owner_user_id, r.status, r.created_at,
+      select r.id, r.name, r.description, r.owner_user_id, r.status, r.source_channel_id, r.source_youtube_video_id, r.created_at,
         u.id as user_id,
         u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
         count(distinct p.id) as posts,
@@ -20,8 +20,8 @@ function createRoomsRepository({ pool, userFromRow }) {
 
   async function createRoom(room) {
     await pool.query(
-      'insert into rooms (id, name, description, owner_user_id, created_at) values ($1, $2, $3, $4, $5)',
-      [room.id, room.name, room.description, room.ownerUserId, room.createdAt]
+      'insert into rooms (id, name, description, owner_user_id, source_channel_id, source_youtube_video_id, created_at) values ($1, $2, $3, $4, $5, $6, $7)',
+      [room.id, room.name, room.description, room.ownerUserId, room.sourceChannelId || null, room.sourceYoutubeVideoId || '', room.createdAt]
     );
   }
 
