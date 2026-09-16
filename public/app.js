@@ -162,6 +162,7 @@ function updateLiveActionButtons(){
   $('#leaveGuestBtn').classList.toggle('hidden',!liveBroadcaster||liveHost);
   $('#inviteGuestBtn').classList.toggle('hidden',!liveHost);
   $('#liveGuestSelect').classList.toggle('hidden',!liveHost);
+  $('#liveTopicTools').classList.toggle('hidden',!liveHost);
   $('#liveTopicTitleInput').classList.toggle('hidden',!(liveHost||canStartLive));
   $('#liveTopicPick').classList.toggle('hidden',!liveHost);
   $('#clearLiveTopicBtn').classList.toggle('hidden',!liveHost||!activeLive?.topicMedia);

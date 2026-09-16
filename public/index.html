@@ -78,6 +78,13 @@
         <div class="cardTitle"><div><span class="livePill">LIVE</span><b>البث المباشر</b></div><span class="counter" id="liveViewerCount">0</span></div>
         <div id="liveTopicTitleView" class="liveTopicTitleView hidden"></div>
         <p class="muted" id="liveStatus">لا يوجد بث مباشر الآن</p>
+        <div class="liveTopicTools hidden" id="liveTopicTools">
+          <input id="liveTopicTitleInput" class="liveTopicTitleInput hidden" maxlength="120" placeholder="عنوان الحوار">
+          <label id="liveTopicPick" class="liveTopicPick hidden">إرسال مقطع الحوار<input id="liveTopicMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
+          <button id="liveTopicPlayBtn" class="hidden">إيقاف الفيديو</button>
+          <button id="liveTopicMuteBtn" class="hidden">صوت الملف</button>
+          <button id="clearLiveTopicBtn" class="hidden">إزالة الموضوع</button>
+        </div>
         <div class="rtActions">
           <button id="startLiveBtn" class="primary">ابدأ بث فيديو</button>
           <button id="watchLiveBtn" class="hidden">مشاهدة البث</button>
@@ -85,11 +92,6 @@
           <button id="liveMuteBtn" class="hidden">كتم الصوت</button>
           <button id="liveShareBtn" class="hidden">مشاركة البث</button>
           <button id="requestGuestBtn" class="hidden">طلب مشاركة</button>
-          <input id="liveTopicTitleInput" class="liveTopicTitleInput hidden" maxlength="120" placeholder="عنوان الحوار">
-          <label id="liveTopicPick" class="liveTopicPick hidden">موضوع الحوار<input id="liveTopicMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
-          <button id="liveTopicPlayBtn" class="hidden">إيقاف الملف</button>
-          <button id="liveTopicMuteBtn" class="hidden">صوت الملف</button>
-          <button id="clearLiveTopicBtn" class="hidden">إزالة الموضوع</button>
           <select id="liveGuestSelect" class="hidden"></select>
           <button id="inviteGuestBtn" class="hidden">دعوة ضيف</button>
           <button id="leaveGuestBtn" class="danger hidden">مغادرة المشاركة</button>
