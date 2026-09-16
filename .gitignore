@@ -1,0 +1,8 @@
+.env
+node_modules/
+logs/
+uploads/
+data/*.bak
+data/*.json
+data/*.tmp
+data/*.broken-*
