@@ -221,7 +221,9 @@ app.post('/api/me/avatar', auth, requireActiveUser, upload.single('avatar'), asy
     const avatarUrl = `/uploads/${req.file.filename}`;
     await pool.query('update users set avatar_url = $1 where id = $2', [avatarUrl, req.user.id]);
     if (user?.avatarUrl) deleteUploadUrl(user.avatarUrl);
-    res.json(publicUser(await getUserById(req.user.id)));
+    const updatedUser = await getUserById(req.user.id);
+    realtime.refreshUserPresence(updatedUser);
+    res.json(publicUser(updatedUser));
   } catch (e) { next(e); }
 });
 

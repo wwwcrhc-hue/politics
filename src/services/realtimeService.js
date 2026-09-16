@@ -16,6 +16,32 @@ function createRealtimeService(dependencies) {
     return [...live.viewers.values()].map(v=>({ socketId:v.socketId, user:v.user, joinedAt:v.joinedAt }));
   }
 
+  function refreshLiveUser(live, user) {
+    let changed = false;
+    const safeUser = publicUser(user);
+    for (const broadcaster of live.broadcasters.values()) {
+      if (sameUser(broadcaster.userId, user.id)) {
+        broadcaster.displayName = user.displayName || user.username;
+        broadcaster.avatarUrl = user.avatarUrl || '';
+        if (broadcaster.role === 'host') live.hostDisplayName = broadcaster.displayName;
+        changed = true;
+      }
+    }
+    for (const viewer of live.viewers.values()) {
+      if (sameUser(viewer.user?.id, user.id)) {
+        viewer.user = safeUser;
+        changed = true;
+      }
+    }
+    for (const request of (live.guestRequests || new Map()).values()) {
+      if (sameUser(request.user?.id, user.id)) {
+        request.user = safeUser;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   function emitLiveViewers(live) {
     io.to(`live:${live.roomId}`).emit('live:viewers', { roomId:live.roomId, viewers:liveViewersPublic(live) });
   }
@@ -92,6 +118,25 @@ function createRealtimeService(dependencies) {
     }
   }
 
+  function refreshUserPresence(user) {
+    if (!user?.id) return;
+    for (const socket of io.sockets.sockets.values()) {
+      if (sameUser(socket.data.userId, user.id)) {
+        socket.data.userId = user.id;
+        socket.data.user = user;
+      }
+    }
+    for (const live of liveByRoom.values()) {
+      if (!refreshLiveUser(live, user)) continue;
+      const payload = livePublic(live);
+      io.to(`live:${live.roomId}`).emit('live:status', payload);
+      io.to(`room:${live.roomId}`).emit('live:status', payload);
+      io.emit('rooms:live-status', { roomId:live.roomId, active:true, live:payload });
+      emitLiveViewers(live);
+      emitGuestRequests(live);
+    }
+  }
+
   function registerHandlers() {
     io.on('connection', socket => {
       socket.on('session:auth', async p=>{try{const u=await socketUser(socket,p?.token);if(u)socket.join(`user:${u.id}`);socket.emit('session:auth-result',{ok:!!u,user:u?publicUser(u):null})}catch(e){logError(e,'session:auth')}});
@@ -140,7 +185,7 @@ function createRealtimeService(dependencies) {
     });
   }
 
-  return { voiceRooms, liveByRoom, livePublic, registerHandlers };
+  return { voiceRooms, liveByRoom, livePublic, refreshUserPresence, registerHandlers };
 }
 
 module.exports = { createRealtimeService };
