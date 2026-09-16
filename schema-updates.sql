@@ -24,6 +24,18 @@ alter table rooms
 create index if not exists rooms_owner_created_idx
   on rooms (owner_user_id, created_at desc);
 
+insert into rooms (id, name, description) values
+  ('local', 'الساحة العامة', 'نقاشات يومية ومواضيع مفتوحة للمجتمع.'),
+  ('gulf', 'مجلس الخليج', 'حوارات عامة حول شؤون الخليج والمجتمع.'),
+  ('arab', 'العالم العربي', 'نقاشات عامة حول اهتمامات المنطقة العربية.'),
+  ('world', 'العالم', 'حوارات عالمية وموضوعات من مختلف الدول.'),
+  ('elections', 'الفعاليات', 'متابعة الفعاليات والمناسبات والبرامج العامة.'),
+  ('economy', 'الأعمال والاقتصاد', 'نقاشات الأعمال والأسواق والحياة الاقتصادية.'),
+  ('debates', 'المناظرات والحوار', 'حوارات مباشرة وآراء متعددة حول مختلف المواضيع.')
+on conflict (id) do update
+set name = excluded.name,
+    description = excluded.description;
+
 insert into app_meta (key, value)
 values ('schema', '{"version": 9}'::jsonb)
 on conflict (key) do update
