@@ -123,18 +123,19 @@ body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";positi
 .liveTopicTools{display:flex;align-items:center;gap:6px;flex:0 0 auto;min-width:0;padding:0;border:0;border-radius:0;background:transparent}
 .liveTopicTools.hidden{display:none!important}
 .liveTopicTools .liveTopicTitleInput{flex:1 1 170px}
-.liveTopicTools button,.liveTopicTools .liveTopicPick{flex:0 0 auto}
+.liveTopicTools button,.liveTopicTools .liveTopicPick,.liveTopicTools .liveTopicChannelSelect{flex:0 0 auto}
+.liveTopicChannelSelect{min-height:42px;min-width:140px;max-width:180px;border:1px solid rgba(217,182,103,.34);background:#0b0f17;color:var(--text);border-radius:12px;padding:9px 12px;outline:none}
 .liveTopicPick{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid var(--line);background:#151b27;color:var(--text);border-radius:12px;padding:10px 14px;cursor:pointer;transition:.18s ease}
 .liveTopicPick:hover{transform:translateY(-1px);border-color:#394258;background:#1a2231}
 .liveTopicPick input{display:none}
 .liveTopicPick.isUploading{opacity:.7;pointer-events:none}
 .liveTopicPanel{position:relative;overflow:hidden;width:100%;aspect-ratio:16/10;border-radius:14px;background:#030406;border:1px solid rgba(217,182,103,.24)}
-.liveTopicPanel img,.liveTopicPanel video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+.liveTopicPanel img,.liveTopicPanel video,.liveTopicPanel iframe{width:100%;height:100%;display:block;object-fit:contain;background:#000;border:0}
 body.liveMode .videoCard .rtActions .liveTopicPick{flex:0 0 auto!important;min-height:38px!important;min-width:116px!important;padding:7px 11px!important;border-radius:10px!important;background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.14)!important;color:var(--text)!important;font-size:12px!important}
 body.liveMode .videoCard .rtActions{flex-wrap:nowrap!important;align-items:center!important;overflow-x:auto!important;justify-content:flex-start!important;max-width:calc(100% - 28px)!important}
 body.liveMode .videoCard .liveTopicTools{position:static!important;width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;backdrop-filter:none!important}
 body.liveMode .videoCard .liveTopicTools .liveTopicTitleInput{min-width:150px!important;min-height:38px!important;padding:7px 10px!important;font-size:12px!important}
-body.liveMode .videoCard .liveTopicTools button,body.liveMode .videoCard .liveTopicTools .liveTopicPick{min-height:38px!important;padding:7px 10px!important;border-radius:10px!important;font-size:12px!important}
+body.liveMode .videoCard .liveTopicTools button,body.liveMode .videoCard .liveTopicTools .liveTopicPick,body.liveMode .videoCard .liveTopicTools .liveTopicChannelSelect{min-height:38px!important;padding:7px 10px!important;border-radius:10px!important;font-size:12px!important}
 body.liveMode .liveTopicPanel{width:100%!important;height:100%!important;min-height:0!important;aspect-ratio:auto!important;border-radius:14px!important;background:#000!important;position:relative!important;max-width:none!important;box-shadow:none!important}
 .liveTopicCaption{position:absolute;right:12px;left:12px;bottom:12px;z-index:4;display:grid;gap:2px;padding:8px 10px;border-radius:12px;background:rgba(5,6,8,.78);border:1px solid rgba(217,182,103,.28);color:var(--gold2);line-height:1.35;text-align:center;backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.32)}
 .liveTopicCaption small{color:rgba(244,246,251,.72);font-size:10px;font-weight:800}
@@ -242,6 +243,7 @@ body.liveMode .videoCard .rtActions button,body.liveMode .videoCard .rtActions s
 body.liveMode .videoCard .rtActions .liveSoundBtn{flex:0 0 38px!important;width:38px!important;min-width:38px!important;max-width:38px!important;padding:0!important}
 body.liveMode .videoCard .liveTopicTools{flex:1 1 auto!important;min-width:0!important;gap:4px!important}
 body.liveMode .videoCard .liveTopicTools .liveTopicTitleInput{flex:1 1 120px!important;min-width:90px!important;max-width:180px!important;height:38px!important;padding:6px 8px!important;font-size:11px!important}
+body.liveMode .videoCard .liveTopicTools .liveTopicChannelSelect{flex:0 1 140px!important;min-width:110px!important;max-width:160px!important;height:38px!important;padding:6px 8px!important;font-size:11px!important}
 body.liveMode .videoCard .rtActions select{flex:0 1 150px!important;max-width:160px!important}
 
 /* Keep speaker/viewer rows inside the sidebar with no hidden horizontal content. */

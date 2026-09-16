@@ -16,7 +16,7 @@ const { securityHeaders } = require('./middleware/security');
 const { createAdminRouter } = require('./routes/adminRoutes');
 const { createAuthRouter } = require('./routes/authRoutes');
 const { createChatRouter } = require('./routes/chatRoutes');
-const { createChannelsRouter } = require('./routes/channelsRoutes');
+const { createChannelsRouter, createChannelPlayerPayload } = require('./routes/channelsRoutes');
 const { createHealthRouter } = require('./routes/healthRoutes');
 const { createPostsRouter } = require('./routes/postsRoutes');
 const { createReportsRouter } = require('./routes/reportsRoutes');
@@ -184,6 +184,33 @@ app.post('/api/live/:roomId/topic-media', auth, requireActiveUser, upload.single
     if (uploadedTitle) live.topicTitle = uploadedTitle;
     const previous = live.topicMedia;
     const media = { url: `/uploads/${req.file.filename}`, type: req.file.mimetype.startsWith('image/') ? 'image' : 'video', mime: req.file.mimetype, name: cleanText(req.file.originalname, 120), size: req.file.size };
+    live.topicMedia = media;
+    live.topicPlayback = { playing: true, muted: false };
+    if (previous?.url) deleteUploadUrl(previous.url);
+    io.to(`live:${roomId}`).emit('live:topic-media', { roomId, media });
+    io.to(`live:${roomId}`).emit('live:title', { roomId, title: live.topicTitle || '' });
+    io.to(`room:${roomId}`).emit('live:status', realtime.livePublic(live));
+    io.emit('rooms:live-status', { roomId, active: true, live: realtime.livePublic(live) });
+    res.json({ ok: true, media });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/live/:roomId/topic-channel', auth, requireActiveUser, express.json(), async (req, res, next) => {
+  try {
+    const roomId = cleanText(req.params.roomId, 40);
+    const channelId = cleanText(req.body?.channelId, 80);
+    const room = await getRoomById(roomId);
+    const live = realtime.liveByRoom.get(roomId);
+    if (!room || !live) return res.status(404).json({ error: 'لا يوجد بث مباشر في هذه الساحة' });
+    if (live.hostUserId !== req.fullUser.id) return res.status(403).json({ error: 'صاحب البث فقط يستطيع تغيير موضوع الحوار' });
+    const channel = await channelsRepository.getChannel(channelId);
+    if (!channel || !channel.isActive) return res.status(404).json({ error: 'القناة غير موجودة' });
+    const player = createChannelPlayerPayload(channel);
+    if (!player.playable || !player.embedUrl) return res.status(400).json({ error: 'هذه القناة غير متاحة للعرض داخل مربع الحوار' });
+    const uploadedTitle = cleanText(req.body?.title, 120);
+    live.topicTitle = uploadedTitle || `نقاش ${channel.name}`;
+    const previous = live.topicMedia;
+    const media = { url: player.embedUrl, type: 'channel', name: channel.name, channelId: channel.id, playerType: player.playerType, youtubeUrl: player.youtubeUrl, fallbackUrl: player.fallbackUrl };
     live.topicMedia = media;
     live.topicPlayback = { playing: true, muted: false };
     if (previous?.url) deleteUploadUrl(previous.url);

@@ -7,6 +7,27 @@ const officialLivePages = {
   skynewsarabia: 'https://www.skynewsarabia.com/livestream-%D8%A7%D9%84%D8%A8%D8%AB-%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B4%D8%B1'
 };
 
+function createChannelPlayerPayload(channel) {
+  const videoId = channel.live?.isLive && channel.live?.isEmbeddable ? channel.live.youtubeVideoId : channel.manualVideoId;
+  const officialLivePage = officialLivePages[channel.id] || '';
+  const channelLiveUrl = !videoId && channel.youtubeChannelId
+    ? `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel.youtubeChannelId)}&autoplay=1&playsinline=1`
+    : '';
+  const embedUrl = videoId
+    ? `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&enablejsapi=1`
+    : officialLivePage || channelLiveUrl;
+  return {
+    channel,
+    playable: !!embedUrl,
+    playerType: videoId ? 'video' : officialLivePage ? 'official-page' : channelLiveUrl ? 'channel-live' : 'external',
+    videoId: videoId || '',
+    embedUrl,
+    youtubeUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : channel.youtubeUrl,
+    fallbackUrl: channel.youtubeUrl || channel.websiteUrl,
+    reason: embedUrl ? '' : 'هذا البث غير متاح للمشاهدة داخل الموقع'
+  };
+}
+
 function optionalUser(jwt, jwtSecret) {
   return (req, _res, next) => {
     const h = req.headers.authorization || '';
@@ -53,24 +74,7 @@ function createChannelsRouter(dependencies) {
     try {
       const channel = await channelsRepository.getChannel(cleanText(req.params.id, 80));
       if (!channel || !channel.isActive) return res.status(404).json({ error: 'القناة غير موجودة' });
-      const videoId = channel.live?.isLive && channel.live?.isEmbeddable ? channel.live.youtubeVideoId : channel.manualVideoId;
-      const officialLivePage = officialLivePages[channel.id] || '';
-      const channelLiveUrl = !videoId && channel.youtubeChannelId
-        ? `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel.youtubeChannelId)}&autoplay=1&playsinline=1`
-        : '';
-      const embedUrl = videoId
-        ? `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&enablejsapi=1`
-        : officialLivePage || channelLiveUrl;
-      res.json({
-        channel,
-        playable: !!embedUrl,
-        playerType: videoId ? 'video' : officialLivePage ? 'official-page' : channelLiveUrl ? 'channel-live' : 'external',
-        videoId: videoId || '',
-        embedUrl,
-        youtubeUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : channel.youtubeUrl,
-        fallbackUrl: channel.youtubeUrl || channel.websiteUrl,
-        reason: embedUrl ? '' : 'هذا البث غير متاح للمشاهدة داخل الموقع'
-      });
+      res.json(createChannelPlayerPayload(channel));
     } catch (e) { next(e); }
   });
 
@@ -93,4 +97,4 @@ function createChannelsRouter(dependencies) {
   return router;
 }
 
-module.exports = { createChannelsRouter };
+module.exports = { createChannelsRouter, createChannelPlayerPayload };
