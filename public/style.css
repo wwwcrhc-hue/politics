@@ -98,6 +98,7 @@ body.liveMode .liveStage{grid-area:stage!important;width:100%!important;max-widt
 body.liveMode .livePeople{grid-area:people!important}
 @media(max-width:1180px){body.liveMode .videoCard{grid-template-columns:1fr!important;grid-template-areas:"head" "stage" "people"!important}body.liveMode .videoCard .rtActions{grid-area:stage!important;max-width:calc(100% - 20px)!important;overflow:auto!important}}
 @media(max-width:760px){body.liveMode .videoCard .rtActions{display:flex!important;justify-content:flex-start!important}.videoCard .rtActions button,.videoCard .rtActions select{white-space:nowrap!important}}
+@media(max-width:760px){body.liveMode .videoCard .rtActions{display:flex!important;grid-template-columns:none!important;flex-wrap:nowrap!important;overflow-x:auto!important}.liveTopicTools{flex-wrap:nowrap!important}.liveTopicTools .liveTopicTitleInput{width:180px!important;flex:0 0 180px!important}}
 
 /* Float the live header so the video can sit at the top. */
 body.liveMode .videoCard{padding:0!important;grid-template-rows:minmax(0,1fr)!important;grid-template-areas:"people stage"!important;overflow:hidden!important}
@@ -119,7 +120,7 @@ body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";positi
 .liveManage .liveReplaceSelect:disabled{opacity:.55;color:var(--muted)}
 
 /* Host-selected discussion media appears as a first-class live tile. */
-.liveTopicTools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1 1 100%;padding:6px;border:1px solid rgba(217,182,103,.24);border-radius:14px;background:rgba(217,182,103,.08)}
+.liveTopicTools{display:flex;align-items:center;gap:6px;flex:0 0 auto;min-width:0;padding:0;border:0;border-radius:0;background:transparent}
 .liveTopicTools.hidden{display:none!important}
 .liveTopicTools .liveTopicTitleInput{flex:1 1 170px}
 .liveTopicTools button,.liveTopicTools .liveTopicPick{flex:0 0 auto}
@@ -130,8 +131,8 @@ body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";positi
 .liveTopicPanel{position:relative;overflow:hidden;width:100%;aspect-ratio:16/10;border-radius:14px;background:#030406;border:1px solid rgba(217,182,103,.24)}
 .liveTopicPanel img,.liveTopicPanel video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
 body.liveMode .videoCard .rtActions .liveTopicPick{flex:0 0 auto!important;min-height:38px!important;min-width:116px!important;padding:7px 11px!important;border-radius:10px!important;background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.14)!important;color:var(--text)!important;font-size:12px!important}
-body.liveMode .videoCard .rtActions{flex-wrap:wrap!important;align-items:center!important}
-body.liveMode .videoCard .liveTopicTools{position:static!important;width:auto!important;min-width:min(560px,100%)!important;max-width:100%!important;margin:0!important;padding:5px!important;background:rgba(217,182,103,.08)!important;border-color:rgba(217,182,103,.26)!important;backdrop-filter:none!important}
+body.liveMode .videoCard .rtActions{flex-wrap:nowrap!important;align-items:center!important;overflow-x:auto!important;justify-content:flex-start!important;max-width:calc(100% - 28px)!important}
+body.liveMode .videoCard .liveTopicTools{position:static!important;width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;backdrop-filter:none!important}
 body.liveMode .videoCard .liveTopicTools .liveTopicTitleInput{min-width:150px!important;min-height:38px!important;padding:7px 10px!important;font-size:12px!important}
 body.liveMode .videoCard .liveTopicTools button,body.liveMode .videoCard .liveTopicTools .liveTopicPick{min-height:38px!important;padding:7px 10px!important;border-radius:10px!important;font-size:12px!important}
 body.liveMode .liveTopicPanel{width:100%!important;height:100%!important;min-height:0!important;aspect-ratio:auto!important;border-radius:14px!important;background:#000!important;position:relative!important;max-width:none!important;box-shadow:none!important}
