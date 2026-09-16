@@ -100,7 +100,7 @@ async function loadChat(){if(!currentRoom){$('#chatBox').innerHTML='';return;}tr
 const msgHtml=m=>{const roomModeration=currentRoom===m.roomId&&canModerateCurrentRoom();return `<div class="msg" data-id="${esc(m.id)}"><b>${esc(m.author?.displayName||m.author?.username||'مستخدم')}</b><div>${esc(m.text)}</div><small class="time">${fmt(m.createdAt)}</small>${me&&(m.userId===me.id||roomModeration)?' <button class="deleteMsg danger">حذف</button>':''}</div>`;}
 const liveMsgHtml=m=>`<div class="msg liveMsg" data-id="${esc(m.id)}"><b>${esc(m.author?.displayName||m.author?.username||'مستخدم')}</b><div>${esc(m.text)}</div><small class="time">${fmt(m.createdAt)}</small></div>`;
 function setChatTitle(text){const title=document.querySelector('.chatCard .cardTitle b');if(title)title.textContent=text;}
-function isLiveChatActive(){return !!currentRoom&&(liveBroadcaster||liveWatching);}
+function isLiveChatActive(){return !!currentRoom&&!!activeLive;}
 function syncRoomLiveStatus(roomId, live){const room=rooms.find(r=>r.id===roomId);if(room){room.live=live||null;renderRooms();}}
 function renderLiveChat(messages=[]){liveMessages=messages||[];setChatTitle('تعليقات البث المباشر');$('#chatNotice').textContent=activeLive?`تعليقات هذا البث فقط`:'تعليقات بثك المباشر';$('#chatBox').innerHTML=liveMessages.length?liveMessages.map(liveMsgHtml).join(''):'<div class="empty">لا توجد تعليقات في هذا البث بعد.</div>';$('#chatBox').scrollTop=$('#chatBox').scrollHeight;}
 function wireChatDeletes(){document.querySelectorAll('.deleteMsg').forEach(btn=>btn.onclick=async()=>{if(!confirm('حذف رسالة الدردشة؟'))return;try{await api(`/api/chat-messages/${btn.closest('.msg').dataset.id}`,{method:'DELETE'});btn.closest('.msg').remove();}catch(e){toast(e.message);}});}
