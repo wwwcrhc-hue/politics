@@ -226,3 +226,12 @@ body.liveMode .liveStage .liveTileBox video{height:100%!important}
 .tickerHead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}.tickerHead span{color:var(--muted);font-size:12px}.tickerRail{display:flex;gap:10px;overflow:auto;padding-bottom:5px}.liveTickerItem{min-width:245px;text-align:right;display:grid;gap:4px}.liveTickerItem strong{font-size:15px}.liveTickerItem .tickerTopic{color:var(--gold2)}.liveTickerItem em{font-style:normal;color:var(--blue);font-size:11px}.tickerRank{font-size:11px;color:#ff7885}
 .liveRoleBadge{font-weight:900}.role-guest .liveRoleBadge{background:rgba(123,167,255,.12);border:1px solid rgba(123,167,255,.3);color:#a8c4ff;padding:4px 8px;border-radius:999px}.role-host .liveRoleBadge{background:rgba(217,182,103,.12);border:1px solid rgba(217,182,103,.3);color:var(--gold2);padding:4px 8px;border-radius:999px}
 .newsHead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.newsFilters{display:flex;gap:8px;flex-wrap:wrap}.newsFilters select{background:#0b1018;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px}
+
+/* Keep live participant panels contained in the sidebar. */
+body.liveMode .videoCard .livePeople{min-width:0!important;overflow-x:hidden!important}
+body.liveMode .liveSpeakers,body.liveMode .liveViewers{min-width:0!important;overflow:hidden!important}
+body.liveMode .livePeople .participant{min-width:0!important;flex-wrap:wrap!important;align-items:flex-start!important}
+body.liveMode .livePeople .participant .meta{min-width:0!important;flex:1 1 120px!important}
+body.liveMode .livePeople .miniActions.liveManage{width:100%!important;display:flex!important;flex-wrap:wrap!important;justify-content:flex-start!important;gap:5px!important}
+body.liveMode .livePeople .miniActions.liveManage button{flex:0 1 auto!important;min-width:0!important;padding:5px 7px!important;font-size:11px!important}
+body.liveMode .livePeople .liveReplaceSelect{flex:1 1 120px!important;min-width:0!important;max-width:100%!important}
