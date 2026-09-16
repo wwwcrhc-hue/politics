@@ -119,8 +119,9 @@ body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";positi
 .liveManage .liveReplaceSelect:disabled{opacity:.55;color:var(--muted)}
 
 /* Host-selected discussion media appears as a first-class live tile. */
-.liveTopicTools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0;padding:10px;border:1px solid rgba(217,182,103,.24);border-radius:16px;background:linear-gradient(180deg,rgba(217,182,103,.1),rgba(7,10,15,.72));box-shadow:0 12px 34px rgba(0,0,0,.22)}
-.liveTopicTools .liveTopicTitleInput{flex:1 1 180px}
+.liveTopicTools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1 1 100%;padding:6px;border:1px solid rgba(217,182,103,.24);border-radius:14px;background:rgba(217,182,103,.08)}
+.liveTopicTools.hidden{display:none!important}
+.liveTopicTools .liveTopicTitleInput{flex:1 1 170px}
 .liveTopicTools button,.liveTopicTools .liveTopicPick{flex:0 0 auto}
 .liveTopicPick{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid var(--line);background:#151b27;color:var(--text);border-radius:12px;padding:10px 14px;cursor:pointer;transition:.18s ease}
 .liveTopicPick:hover{transform:translateY(-1px);border-color:#394258;background:#1a2231}
@@ -128,8 +129,9 @@ body.liveMode .videoCard .rtActions .liveSoundBtn.muted::after{content:"";positi
 .liveTopicPick.isUploading{opacity:.7;pointer-events:none}
 .liveTopicPanel{position:relative;overflow:hidden;width:100%;aspect-ratio:16/10;border-radius:14px;background:#030406;border:1px solid rgba(217,182,103,.24)}
 .liveTopicPanel img,.liveTopicPanel video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
-body.liveMode .videoCard .rtActions .liveTopicPick{flex:0 0 auto!important;min-height:42px!important;min-width:92px!important;padding:7px 11px!important;border-radius:10px!important;background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.14)!important;color:var(--text)!important;font-size:12px!important}
-body.liveMode .videoCard .liveTopicTools{position:absolute!important;top:58px!important;right:14px!important;z-index:15!important;width:min(460px,calc(100% - 28px))!important;margin:0!important;padding:8px!important;background:rgba(5,6,8,.72)!important;border-color:rgba(217,182,103,.32)!important;backdrop-filter:blur(14px)!important}
+body.liveMode .videoCard .rtActions .liveTopicPick{flex:0 0 auto!important;min-height:38px!important;min-width:116px!important;padding:7px 11px!important;border-radius:10px!important;background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.14)!important;color:var(--text)!important;font-size:12px!important}
+body.liveMode .videoCard .rtActions{flex-wrap:wrap!important;align-items:center!important}
+body.liveMode .videoCard .liveTopicTools{position:static!important;width:auto!important;min-width:min(560px,100%)!important;max-width:100%!important;margin:0!important;padding:5px!important;background:rgba(217,182,103,.08)!important;border-color:rgba(217,182,103,.26)!important;backdrop-filter:none!important}
 body.liveMode .videoCard .liveTopicTools .liveTopicTitleInput{min-width:150px!important;min-height:38px!important;padding:7px 10px!important;font-size:12px!important}
 body.liveMode .videoCard .liveTopicTools button,body.liveMode .videoCard .liveTopicTools .liveTopicPick{min-height:38px!important;padding:7px 10px!important;border-radius:10px!important;font-size:12px!important}
 body.liveMode .liveTopicPanel{width:100%!important;height:100%!important;min-height:0!important;aspect-ratio:auto!important;border-radius:14px!important;background:#000!important;position:relative!important;max-width:none!important;box-shadow:none!important}
