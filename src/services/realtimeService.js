@@ -43,9 +43,15 @@ function createRealtimeService(dependencies) {
     socket.data.userId=user.id; socket.data.user=user; return user;
   }
 
+  function sameUser(a, b) {
+    return !!a && !!b && String(a) === String(b);
+  }
+
   async function liveHostActor(socket, token, live) {
-    const actor = token ? await socketUser(socket, token) : (socket.data.user || null);
-    if (actor?.id === live?.hostUserId) return actor;
+    const actor = token ? await socketUser(socket, token) : null;
+    if (sameUser(actor?.id, live?.hostUserId)) return actor;
+    const sessionUser = socket.data.user || (socket.data.userId ? await getUserById(socket.data.userId) : null);
+    if (sessionUser?.status === 'active' && sameUser(sessionUser.id, live?.hostUserId)) return sessionUser;
     if (socket.id === live?.hostSocketId) {
       const host = await getUserById(live.hostUserId);
       if (host?.status === 'active') {
