@@ -134,8 +134,9 @@ function createChannelsRepository({ pool }) {
     const { rows } = await pool.query(`
       ${channelSelect}, false as followed
       ${channelJoins}
-      where ch.is_active = true and cache.is_live = true
-      order by coalesce(cache.viewer_count,0) desc, ch.priority desc, cache.checked_at desc
+      where ch.is_active = true
+        and (cache.is_live = true or ch.youtube_channel_id <> '' or ch.manual_video_id <> '')
+      order by coalesce(cache.is_live,false) desc, coalesce(cache.viewer_count,0) desc, ch.priority desc, cache.checked_at desc nulls last
       limit $1
     `, [safeLimit]);
     return rows.map(channelFromRow);

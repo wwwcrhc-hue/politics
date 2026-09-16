@@ -50,13 +50,18 @@ function createChannelsRouter(dependencies) {
       const channel = await channelsRepository.getChannel(cleanText(req.params.id, 80));
       if (!channel || !channel.isActive) return res.status(404).json({ error: 'القناة غير موجودة' });
       const videoId = channel.live?.isLive && channel.live?.isEmbeddable ? channel.live.youtubeVideoId : channel.manualVideoId;
+      const channelLiveUrl = !videoId && channel.youtubeChannelId
+        ? `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel.youtubeChannelId)}&autoplay=1&playsinline=1`
+        : '';
       res.json({
         channel,
-        playable: !!videoId,
+        playable: !!videoId || !!channelLiveUrl,
+        playerType: videoId ? 'video' : channelLiveUrl ? 'channel-live' : 'external',
         videoId: videoId || '',
+        embedUrl: videoId ? `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&enablejsapi=1` : channelLiveUrl,
         youtubeUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : channel.youtubeUrl,
         fallbackUrl: channel.youtubeUrl || channel.websiteUrl,
-        reason: videoId ? '' : 'هذا البث غير متاح للمشاهدة داخل الموقع'
+        reason: videoId || channelLiveUrl ? '' : 'هذا البث غير متاح للمشاهدة داخل الموقع'
       });
     } catch (e) { next(e); }
   });
