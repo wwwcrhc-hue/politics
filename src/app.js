@@ -272,10 +272,14 @@ app.get('/api/users/:id/posts', async (req, res, next) => {
 
 async function notifyUser(userId, actorUserId, type, text, data = {}) {
   if (!userId || userId === actorUserId) return;
+  const id = makeId('n');
+  const createdAt = now();
   await pool.query(
     'insert into notifications (id,user_id,actor_user_id,type,text,data,created_at) values ($1,$2,$3,$4,$5,$6::jsonb,$7)',
-    [makeId('n'), userId, actorUserId || null, type, text, JSON.stringify(data || {}), now()]
+    [id, userId, actorUserId || null, type, text, JSON.stringify(data || {}), createdAt]
   );
+  const actor = actorUserId ? publicUser(await getUserById(actorUserId)) : null;
+  io.to(`user:${userId}`).emit('notification:new', { id, type, text, data:data || {}, readAt:null, createdAt, actor });
 }
 
 async function socialSummaryFor(viewerId, targetId) {
