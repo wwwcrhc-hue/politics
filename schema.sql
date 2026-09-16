@@ -379,7 +379,7 @@ on conflict (id) do update set
 
 update news_channels set youtube_channel_id='UCfiwzLy-8yKzIbsmZTzxDgw', logo_url='https://www.google.com/s2/favicons?domain=aljazeera.net&sz=128', is_verified=true where id='aljazeera-ar';
 update news_channels set youtube_channel_id='UCahpxixMCwoANAftn6IxkTg', logo_url='https://www.google.com/s2/favicons?domain=alarabiya.net&sz=128', is_verified=true where id='alarabiya';
-update news_channels set logo_url='https://www.google.com/s2/favicons?domain=alhadath.net&sz=128' where id='alhadath';
+update news_channels set youtube_channel_id='UCrj5BGAhtWxDfqbza9T9hqA', logo_url='https://www.google.com/s2/favicons?domain=alhadath.net&sz=128', is_verified=true where id='alhadath';
 update news_channels set logo_url='https://www.google.com/s2/favicons?domain=alekhbariya.net&sz=128' where id='saudi-ekhbariya';
 update news_channels set youtube_channel_id='UCIJXOvggjKtCagMfxvcCzAA', logo_url='https://www.google.com/s2/favicons?domain=skynewsarabia.com&sz=128', is_verified=true where id='skynewsarabia';
 update news_channels set logo_url='https://www.google.com/s2/favicons?domain=bbc.com&sz=128' where id='bbc-arabic';
