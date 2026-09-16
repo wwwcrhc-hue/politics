@@ -30,7 +30,7 @@ const livePeers = new Map();
 const liveViewerPeers = new Map();
 const languages = ['ar','en','fr','es','de','tr','fa','ur','hi','bn','id','ms','zh','ja','ko','ru','it','pt','nl','pl','sv','uk','he','sw','am','ha','yo','ig','th','vi','fil','el','ro','cs','hu','da','fi','no','bg','sr','hr','sk','sl','lt','lv','et'];
 const uiText = {
-  ar:{home:'الرئيسية',login:'دخول',messages:'الرسائل',notifications:'التنبيهات',profile:'حسابي',logout:'خروج',allRooms:'كل الساحات',news:'الأخبار السياسية العالمية',hot:'أقوى الحوارات الآن',search:'بحث'},
+  ar:{home:'الرئيسية',login:'دخول',messages:'الرسائل',notifications:'التنبيهات',profile:'حسابي',logout:'خروج',allRooms:'كل الساحات',news:'الأخبار العامة العالمية',hot:'أقوى الحوارات الآن',search:'بحث'},
   en:{home:'Home',login:'Login',messages:'Messages',notifications:'Notifications',profile:'My profile',logout:'Logout',allRooms:'All rooms',news:'Global political news',hot:'Hottest live debates',search:'Search'},
   fr:{home:'Accueil',login:'Connexion',messages:'Messages',notifications:'Notifications',profile:'Profil',logout:'Sortir',allRooms:'Toutes les salles',news:'Actualité politique mondiale',hot:'Débats en direct',search:'Rechercher'},
   es:{home:'Inicio',login:'Entrar',messages:'Mensajes',notifications:'Notificaciones',profile:'Perfil',logout:'Salir',allRooms:'Todas las salas',news:'Noticias políticas globales',hot:'Debates en vivo',search:'Buscar'},
@@ -107,7 +107,7 @@ async function selectRoom(id){
   currentRoom=id; const room=rooms.find(r=>r.id===id); if(!room)return;
   currentRoomPower={role:'guest',canModerate:false,canManage:false,banned:false,roomStatus:room.status||'active'};
   if(me){try{currentRoomPower=await api(`/api/rooms/${id}/permissions`);}catch{}}
-  $('#roomTitle').textContent=room.name; $('#roomDesc').textContent=room.description; $('#postRoom').value=id; $('#roomContext').textContent=currentRoomPower.role==='owner'?'غرفتك':currentRoomPower.role==='moderator'?'أنت مشرف في هذه الغرفة':'ساحة سياسية'; renderRooms(); socket.emit('room:join',id);
+  $('#roomTitle').textContent=room.name; $('#roomDesc').textContent=room.description; $('#postRoom').value=id; $('#roomContext').textContent=currentRoomPower.role==='owner'?'غرفتك':currentRoomPower.role==='moderator'?'أنت مشرف في هذه الغرفة':'ساحة عامة'; renderRooms(); socket.emit('room:join',id);
   $('#manageRoomBtn').classList.toggle('hidden',!canModerateCurrentRoom());
   $('#chatNotice').textContent=`دردشة ${room.name}`; $('#chatSend').classList.toggle('hidden',!canAct()||currentRoomPower.banned); resetRealtimeUi();
   $('#globalChannels')?.classList.add('hidden');
@@ -313,7 +313,7 @@ $('#newRoomBtn').onclick=()=>openRoomForm();
 $('#saveRoomBtn').onclick=saveRoom;
 $('#cancelRoomBtn').onclick=()=>{$('#roomForm').classList.add('hidden');roomEditId='';pendingRoomSource=null;};
 function logout(refresh=true){leaveVoice();if(liveHost)stopLive();else if(liveBroadcaster)leaveLiveGuest();token='';me=null;localStorage.removeItem('token');updateAuthUI();if(refresh)loadFeed();} $('#logoutBtn').onclick=()=>logout();
-$('#homeBtn').onclick=async()=>{if(liveHost)return toast('أنت تبث الآن. أنهِ البث قبل العودة للرئيسية حتى لا ينقطع الحوار.');await leaveVoice();await stopWatchingLive();currentRoom='';currentRoomPower={role:'guest',canModerate:false,canManage:false,banned:false,roomStatus:'active'};$('#manageRoomBtn').classList.add('hidden');resetRealtimeUi();$('#roomTitle').textContent=t('allRooms');$('#roomDesc').textContent='منشورات سياسية، صوت مباشر، صور وفيديو، وبث حي.';renderRooms();$('#globalChannels')?.classList.remove('hidden');$('#chatNotice').textContent='اختر ساحة لفتح الدردشة.';$('#chatBox').innerHTML='';$('#chatSend').classList.add('hidden');await loadChannelHome();await loadFeed();await loadPoliticalNews();};
+$('#homeBtn').onclick=async()=>{if(liveHost)return toast('أنت تبث الآن. أنهِ البث قبل العودة للرئيسية حتى لا ينقطع الحوار.');await leaveVoice();await stopWatchingLive();currentRoom='';currentRoomPower={role:'guest',canModerate:false,canManage:false,banned:false,roomStatus:'active'};$('#manageRoomBtn').classList.add('hidden');resetRealtimeUi();$('#roomTitle').textContent=t('allRooms');$('#roomDesc').textContent='منشورات عامة، صوت مباشر، صور وفيديو، وبث حي.';renderRooms();$('#globalChannels')?.classList.remove('hidden');$('#chatNotice').textContent='اختر ساحة لفتح الدردشة.';$('#chatBox').innerHTML='';$('#chatSend').classList.add('hidden');await loadChannelHome();await loadFeed();await loadPoliticalNews();};
 function userLine(user){return `<button class="userLine" data-user="${esc(user.id)}">${avatarHtml(user)}<span><b>${esc(user.displayName||user.username)}</b><small>@${esc(user.username||'')}</small></span></button>`;}
 async function refreshSocialBadge(){if(!me)return;try{socialSummary=await api('/api/me/social');const unread=(socialSummary.notifications||[]).filter(n=>!n.readAt).length+(socialSummary.requests||[]).length;$('#notificationCount').textContent=unread;$('#notificationCount').classList.toggle('hidden',!unread);}catch{}}
 function renderNotificationList(notifications=[]){$('#notificationsList').innerHTML=notifications.length?notifications.map(n=>`<div class="msg ${n.readAt?'':'unread'}"><b>${esc(n.text)}</b><small class="time">${fmt(n.createdAt)}</small></div>`).join(''):'<div class="empty">لا توجد تنبيهات.</div>';}

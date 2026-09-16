@@ -12,7 +12,7 @@ function normalizePort(value, fallback) {
 const ROOT_DIR = path.resolve(__dirname, '..', '..');
 
 const env = {
-  APP_NAME: 'ساحات سياسية',
+  APP_NAME: 'ساحات عامة',
   VERSION: '7.0.0',
   HOST: process.env.HOST || '0.0.0.0',
   START_PORT: normalizePort(process.env.PORT, 3000),

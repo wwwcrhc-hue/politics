@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#070a0f">
-  <title>ساحات سياسية</title>
+  <title>ساحات عامة</title>
   <link rel="stylesheet" href="/style.css?v=8.0-live-social">
 </head>
 <body class="userApp">
   <header class="topbar">
-    <a class="brand" href="/" aria-label="ساحات سياسية">
+    <a class="brand" href="/" aria-label="ساحات عامة">
       <span class="brandMark">س</span>
-      <span><b>ساحات سياسية</b><small>واجهة المستخدم</small></span>
+      <span><b>ساحات عامة</b><small>واجهة المستخدم</small></span>
     </a>
     <div class="topSearch"><span>⌕</span><input id="searchInput" placeholder="ابحث في الآراء والتحليلات..."><button id="searchBtn">بحث</button><button class="hidden" id="clearSearchBtn">مسح</button></div>
     <nav class="topActions">
@@ -29,7 +29,7 @@
   <section class="liveTicker hidden" id="liveTicker"></section>
   <section class="globalChannels" id="globalChannels">
     <div class="globalHead">
-      <div><span class="eyebrow">مركز سياسي عالمي</span><h2>مباشر حول العالم</h2></div>
+      <div><span class="eyebrow">مركز عالمي عام</span><h2>مباشر حول العالم</h2></div>
       <button id="refreshChannelsBtn">تحديث القنوات</button>
     </div>
     <div class="channelLiveRail" id="channelLiveRail"></div>
@@ -61,7 +61,7 @@
 
   <div class="shell">
     <aside class="roomsPane">
-      <div class="paneHead"><div><span class="eyebrow">مجتمعات سياسية</span><h2>الساحات</h2></div><button class="iconBtn primary hidden" id="newRoomBtn" title="إنشاء غرفة">＋</button></div>
+      <div class="paneHead"><div><span class="eyebrow">مجتمعات عامة</span><h2>الساحات</h2></div><button class="iconBtn primary hidden" id="newRoomBtn" title="إنشاء غرفة">＋</button></div>
       <div class="roomForm hidden" id="roomForm">
         <input id="roomNameInput" maxlength="60" placeholder="اسم الغرفة">
         <textarea id="roomDescInput" maxlength="240" placeholder="وصف مختصر"></textarea>
@@ -73,12 +73,12 @@
 
     <main class="feedPane">
       <section class="roomHero">
-        <div class="heroText"><span class="eyebrow" id="roomContext">المشهد السياسي الآن</span><h1 id="roomTitle">كل الساحات</h1><p id="roomDesc">منشورات سياسية، غرف صوتية، صور وفيديو، وبث مباشر متعدد المشاركين.</p></div>
+        <div class="heroText"><span class="eyebrow" id="roomContext">المشهد العام الآن</span><h1 id="roomTitle">كل الساحات</h1><p id="roomDesc">منشورات عامة، غرف صوتية، صور وفيديو، وبث مباشر متعدد المشاركين.</p></div>
         <div class="heroActions"><button id="manageRoomBtn" class="hidden">إدارة الغرفة</button></div>
       </section>
 
       <section class="composer hidden" id="composer">
-        <div class="composerTop"><span class="avatar" id="composerAvatar">أ</span><textarea id="postText" maxlength="4000" placeholder="ما رأيك في الحدث السياسي؟"></textarea></div>
+        <div class="composerTop"><span class="avatar" id="composerAvatar">أ</span><textarea id="postText" maxlength="4000" placeholder="ما رأيك في الموضوع؟"></textarea></div>
         <div class="mediaPreview" id="mediaPreview"></div>
         <div class="composerBottom">
           <label class="filePick">▣ صورة / فيديو<input id="postMedia" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
@@ -143,7 +143,7 @@
     </aside>
   </div>
 
-  <div class="modal hidden" id="modal"><div class="modalCard authCard"><button class="close" id="closeModal">×</button><span class="eyebrow">ساحات سياسية</span><h2 id="modalTitle">تسجيل الدخول</h2><input id="authName" maxlength="24" placeholder="اسم المستخدم"><input id="displayName" class="hidden" maxlength="40" placeholder="الاسم الظاهر"><input id="authPass" maxlength="128" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)"><button class="primary wide" id="authSubmit">دخول</button><button class="link" id="switchAuth">إنشاء حساب جديد</button><p class="error" id="authError"></p></div></div>
+  <div class="modal hidden" id="modal"><div class="modalCard authCard"><button class="close" id="closeModal">×</button><span class="eyebrow">ساحات عامة</span><h2 id="modalTitle">تسجيل الدخول</h2><input id="authName" maxlength="24" placeholder="اسم المستخدم"><input id="displayName" class="hidden" maxlength="40" placeholder="الاسم الظاهر"><input id="authPass" maxlength="128" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)"><button class="primary wide" id="authSubmit">دخول</button><button class="link" id="switchAuth">إنشاء حساب جديد</button><p class="error" id="authError"></p></div></div>
 
   <div class="modal hidden" id="roomManageModal"><div class="modalCard manageCard"><button class="close" id="closeRoomManage">×</button><span class="eyebrow">صلاحيات الغرفة</span><h2 id="manageRoomTitle">إدارة الغرفة</h2><div class="manageGrid"><section><h3>إضافة عضو</h3><div class="inline"><input id="memberUsername" placeholder="اسم المستخدم"><select id="memberRole"><option value="member">عضو</option><option value="moderator">مشرف غرفة</option></select><button class="primary" id="addMemberBtn">إضافة</button></div></section><section><h3>حالة الغرفة</h3><div class="inline"><button id="openRoomBtn">فتح الغرفة</button><button id="closeRoomBtn" class="danger">إغلاق الغرفة</button></div></section></div><div class="memberList" id="memberList"></div></div></div>
 
