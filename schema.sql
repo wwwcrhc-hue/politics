@@ -377,21 +377,23 @@ on conflict (id) do update set
   website_url=excluded.website_url, logo_url=excluded.logo_url, is_verified=excluded.is_verified,
   priority=excluded.priority, manual_video_id=excluded.manual_video_id, updated_at=now();
 
-update news_channels set youtube_channel_id='UCfiwzLy-8yKzIbsmZTzxDgw', logo_url='https://www.google.com/s2/favicons?domain=aljazeera.net&sz=128', is_verified=true where id='aljazeera-ar';
-update news_channels set youtube_channel_id='UCahpxixMCwoANAftn6IxkTg', logo_url='https://www.google.com/s2/favicons?domain=alarabiya.net&sz=128', is_verified=true where id='alarabiya';
-update news_channels set youtube_channel_id='UCrj5BGAhtWxDfqbza9T9hqA', logo_url='https://www.google.com/s2/favicons?domain=alhadath.net&sz=128', is_verified=true where id='alhadath';
-update news_channels set logo_url='https://www.google.com/s2/favicons?domain=alekhbariya.net&sz=128' where id='saudi-ekhbariya';
+update news_channels set youtube_channel_id='UCfiwzLy-8yKzIbsmZTzxDgw', logo_url='https://www.google.com/s2/favicons?domain=aljazeera.net&sz=128', is_verified=true, manual_video_id='N8xxOD0nT1Y' where id='aljazeera-ar';
+update news_channels set youtube_channel_id='UCCv1Pd24oPErw5S7zJWltnQ', logo_url='https://www.google.com/s2/favicons?domain=aljazeeramubasher.net&sz=128', is_verified=true where id='aljazeera-mubasher';
+update news_channels set youtube_channel_id='UCahpxixMCwoANAftn6IxkTg', logo_url='https://www.google.com/s2/favicons?domain=alarabiya.net&sz=128', is_verified=true, manual_video_id='n7eQejkXbnM' where id='alarabiya';
+update news_channels set youtube_channel_id='UCrj5BGAhtWxDfqbza9T9hqA', logo_url='https://www.google.com/s2/favicons?domain=alhadath.net&sz=128', is_verified=true, manual_video_id='2YkEX2Z8Vds' where id='alhadath';
+update news_channels set youtube_channel_id='UCV01ajGl6nt09h40iDoHDNg', logo_url='https://www.google.com/s2/favicons?domain=alekhbariya.net&sz=128', is_verified=true where id='saudi-ekhbariya';
 update news_channels set youtube_channel_id='UCIJXOvggjKtCagMfxvcCzAA', logo_url='https://www.google.com/s2/favicons?domain=skynewsarabia.com&sz=128', is_verified=true where id='skynewsarabia';
 update news_channels set logo_url='https://www.google.com/s2/favicons?domain=bbc.com&sz=128' where id='bbc-arabic';
+update news_channels set youtube_channel_id='UC30ditU5JI16o5NbFsHde_Q', logo_url='https://www.google.com/s2/favicons?domain=dw.com&sz=128', is_verified=true where id='dw-ar';
 update news_channels set youtube_channel_id='UC5GvVahlgulCyo4cshSmbcg', logo_url='https://www.google.com/s2/favicons?domain=trtarabi.com&sz=128', is_verified=true where id='trt-arabi';
 update news_channels set youtube_channel_id='UC16niRr50-MSBwiO3YDb3RA', logo_url='https://www.google.com/s2/favicons?domain=bbc.com&sz=128', is_verified=true where id='bbc-news';
 update news_channels set youtube_channel_id='UCupvZG-5ko_eiXAupbDfxWw', logo_url='https://www.google.com/s2/favicons?domain=cnn.com&sz=128', is_verified=true where id='cnn';
 update news_channels set youtube_channel_id='UChqUTb7kYRX8-EiaN3XFrSQ', logo_url='https://www.google.com/s2/favicons?domain=reuters.com&sz=128', is_verified=true where id='reuters';
 update news_channels set youtube_channel_id='UCQfwfsi5VrQ8yKZ-UWmAEFg', logo_url='https://www.google.com/s2/favicons?domain=france24.com&sz=128', is_verified=true, manual_video_id='9c_Bac-17Rk' where id='france24-en';
 update news_channels set youtube_channel_id='UCknLrEdhRCp1aegoMqRaCZg', logo_url='https://www.google.com/s2/favicons?domain=dw.com&sz=128', is_verified=true where id='dw-news';
-update news_channels set logo_url='https://www.google.com/s2/favicons?domain=trtworld.com&sz=128' where id='trt-world';
-update news_channels set logo_url='https://www.google.com/s2/favicons?domain=www3.nhk.or.jp&sz=128' where id='nhk-world';
-update news_channels set logo_url='https://www.google.com/s2/favicons?domain=abc.net.au&sz=128' where id='abc-australia';
+update news_channels set youtube_channel_id='UC7fWeaHhqgM4Ry-RMpM2YYw', logo_url='https://www.google.com/s2/favicons?domain=trtworld.com&sz=128', is_verified=true where id='trt-world';
+update news_channels set youtube_channel_id='UCSPEjw8F2nQDtmUKPFNF7_A', logo_url='https://www.google.com/s2/favicons?domain=www3.nhk.or.jp&sz=128', is_verified=true, manual_video_id='IimtbuqYIE8' where id='nhk-world';
+update news_channels set youtube_channel_id='UCVgO39Bk5sMo66-6o6Spn6Q', logo_url='https://www.google.com/s2/favicons?domain=abc.net.au&sz=128', is_verified=true, manual_video_id='vOTiJkg1voo' where id='abc-australia';
 
 insert into app_meta (key,value) values ('schema','{"version":11}'::jsonb)
 on conflict(key) do update set value=excluded.value,updated_at=now();
