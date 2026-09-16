@@ -243,3 +243,12 @@ body.liveMode .videoCard .rtActions .liveSoundBtn{flex:0 0 38px!important;width:
 body.liveMode .videoCard .liveTopicTools{flex:1 1 auto!important;min-width:0!important;gap:4px!important}
 body.liveMode .videoCard .liveTopicTools .liveTopicTitleInput{flex:1 1 120px!important;min-width:90px!important;max-width:180px!important;height:38px!important;padding:6px 8px!important;font-size:11px!important}
 body.liveMode .videoCard .rtActions select{flex:0 1 150px!important;max-width:160px!important}
+
+/* Keep speaker/viewer rows inside the sidebar with no hidden horizontal content. */
+body.liveMode .livePeople .participant{width:100%!important;max-width:100%!important;overflow:hidden!important}
+body.liveMode .livePeople .participant .meta{max-width:100%!important;overflow:hidden!important}
+body.liveMode .livePeople .participant .miniAvatar{flex:0 0 30px!important}
+body.liveMode .livePeople .miniActions{max-width:100%!important;min-width:0!important}
+body.liveMode .livePeople .miniActions button{flex:0 1 auto!important;min-width:0!important;max-width:96px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.liveMode .livePeople .liveRoleBadge{margin-inline-start:0!important}
+body.liveMode .liveSpeakers>b,body.liveMode .liveViewers>b{display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
