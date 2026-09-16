@@ -86,9 +86,9 @@ body.liveMode .liveStage{height:calc(100vh - 164px)!important;min-height:560px!i
 @media(max-width:1180px){body.liveMode .videoCard,body.liveMode .chatCard{min-height:auto!important}body.liveMode .liveStage{height:clamp(520px,72vh,820px)!important;min-height:520px!important}}
 @media(max-width:760px){body.liveMode .liveStage{height:64vh!important;min-height:420px!important}}
 
-/* Floating live controls: video owns the center, controls sit on top of it. */
-body.liveMode .videoCard{position:relative!important;grid-template-columns:minmax(220px,300px) minmax(720px,1fr)!important;grid-template-areas:"head head" "people stage"!important}
-body.liveMode .videoCard .rtActions{grid-area:stage!important;align-self:end!important;justify-self:center!important;position:relative!important;top:auto!important;z-index:12!important;width:auto!important;max-width:calc(100% - 28px)!important;margin:0 0 14px!important;padding:6px!important;display:flex!important;gap:6px!important;flex-wrap:nowrap!important;border-radius:14px!important;border:1px solid rgba(255,255,255,.18)!important;background:linear-gradient(180deg,rgba(38,43,52,.72),rgba(18,22,30,.82))!important;box-shadow:0 12px 36px rgba(0,0,0,.38)!important;backdrop-filter:blur(14px)!important}
+/* Live controls sit below the video so they never cover the stream. */
+body.liveMode .videoCard{position:relative!important;grid-template-columns:minmax(220px,300px) minmax(720px,1fr)!important;grid-template-areas:"head head" "people stage" "people actions"!important}
+body.liveMode .videoCard .rtActions{grid-area:actions!important;align-self:start!important;justify-self:center!important;position:relative!important;top:auto!important;z-index:12!important;width:auto!important;max-width:calc(100% - 28px)!important;margin:8px 0 0!important;padding:6px!important;display:flex!important;gap:6px!important;flex-wrap:nowrap!important;border-radius:14px!important;border:1px solid rgba(255,255,255,.18)!important;background:linear-gradient(180deg,rgba(38,43,52,.72),rgba(18,22,30,.82))!important;box-shadow:0 12px 36px rgba(0,0,0,.38)!important;backdrop-filter:blur(14px)!important}
 body.liveMode .videoCard .rtActions button,body.liveMode .videoCard .rtActions select{flex:0 0 auto!important;min-height:42px!important;min-width:74px!important;padding:7px 11px!important;border-radius:10px!important;background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.14)!important;color:var(--text)!important;font-size:12px!important}
 body.liveMode .videoCard .rtActions button.primary{background:rgba(217,182,103,.88)!important;color:#111!important}
 body.liveMode .videoCard .rtActions button.danger{background:rgba(239,91,103,.22)!important;border-color:rgba(239,91,103,.48)!important;color:#ffadb5!important}
@@ -96,17 +96,17 @@ body.liveMode .videoCard .rtActions button.hidden,body.liveMode .videoCard .rtAc
 body.liveMode .videoCard .rtActions select{max-width:220px!important}
 body.liveMode .liveStage{grid-area:stage!important;width:100%!important;max-width:none!important;z-index:1!important}
 body.liveMode .livePeople{grid-area:people!important}
-@media(max-width:1180px){body.liveMode .videoCard{grid-template-columns:1fr!important;grid-template-areas:"head" "stage" "people"!important}body.liveMode .videoCard .rtActions{grid-area:stage!important;max-width:calc(100% - 20px)!important;overflow:auto!important}}
+@media(max-width:1180px){body.liveMode .videoCard{grid-template-columns:1fr!important;grid-template-areas:"head" "stage" "actions" "people"!important}body.liveMode .videoCard .rtActions{grid-area:actions!important;max-width:calc(100% - 20px)!important;overflow:auto!important}}
 @media(max-width:760px){body.liveMode .videoCard .rtActions{display:flex!important;justify-content:flex-start!important}.videoCard .rtActions button,.videoCard .rtActions select{white-space:nowrap!important}}
 @media(max-width:760px){body.liveMode .videoCard .rtActions{display:flex!important;grid-template-columns:none!important;flex-wrap:nowrap!important;overflow-x:auto!important}.liveTopicTools{flex-wrap:nowrap!important}.liveTopicTools .liveTopicTitleInput{width:180px!important;flex:0 0 180px!important}}
 
 /* Float the live header so the video can sit at the top. */
-body.liveMode .videoCard{padding:0!important;grid-template-rows:minmax(0,1fr)!important;grid-template-areas:"people stage"!important;overflow:hidden!important}
+body.liveMode .videoCard{padding:0!important;grid-template-rows:minmax(0,1fr) auto!important;grid-template-areas:"people stage" "people actions"!important;overflow:visible!important}
 body.liveMode .videoCard .cardTitle{position:absolute!important;top:10px!important;right:14px!important;z-index:14!important;width:auto!important;min-height:0!important;margin:0!important;padding:7px 10px!important;border-radius:12px!important;background:rgba(5,6,8,.58)!important;border:1px solid rgba(255,255,255,.12)!important;backdrop-filter:blur(12px)!important}
 body.liveMode #liveViewerCount{position:absolute!important;top:10px!important;left:14px!important;z-index:14!important}
 body.liveMode .liveStage{align-self:stretch!important;height:calc(100vh - 74px)!important;min-height:700px!important;border-radius:16px!important}
 body.liveMode .videoCard .livePeople{padding-top:54px!important}
-@media(max-width:1180px){body.liveMode .videoCard{grid-template-areas:"stage" "people"!important}body.liveMode .liveStage{height:clamp(620px,82vh,940px)!important;min-height:620px!important}}
+@media(max-width:1180px){body.liveMode .videoCard{grid-template-areas:"stage" "actions" "people"!important}body.liveMode .liveStage{height:clamp(620px,82vh,940px)!important;min-height:620px!important}}
 @media(max-width:760px){body.liveMode .liveStage{height:74vh!important;min-height:480px!important}}
 
 /* Viewer count lives with the viewers list; sound control is icon-first. */
