@@ -10,7 +10,8 @@ function createPostsService({ postsRepository, cleanText, makeId, now, postView,
   async function listFeed(query) {
     const room = cleanText(query.room, 40);
     const q = cleanText(query.q, 100);
-    return (await postsRepository.listFeed({ room, q })).map(postView);
+    const poetryKind = ['reply','dialogue','zamil'].includes(query.poetryKind) ? query.poetryKind : '';
+    return (await postsRepository.listFeed({ room, q, poetryKind })).map(postView);
   }
 
   async function createPost(userId, body, uploadedFiles) {

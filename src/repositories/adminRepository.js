@@ -7,8 +7,12 @@ function createAdminRepository({ pool, userFromRow }) {
         count(distinct p.id)::int as posts,
         count(distinct m.id)::int as messages
       from users u
-      left join posts p on p.user_id = u.id
-      left join room_messages m on m.user_id = u.id
+      left join posts p on p.user_id = u.id and exists (
+        select 1 from rooms r where r.id = p.room_id and r.poetry_kind in ('reply','dialogue','zamil')
+      )
+      left join room_messages m on m.user_id = u.id and exists (
+        select 1 from rooms r where r.id = m.room_id and r.poetry_kind in ('reply','dialogue','zamil')
+      )
       group by u.id
       order by u.created_at desc
       limit 500

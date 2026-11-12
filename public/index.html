@@ -3,17 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#070a0f">
-  <title>ساحات عامة</title>
-  <link rel="stylesheet" href="/style.css?v=8.1-general">
+  <meta name="theme-color" content="#100d0a">
+  <meta name="description" content="منصة الرديّات والمحاورات والزوامل: مجالس شعرية، قصائد ومنافسات وبث مباشر بالصوت والصورة.">
+  <title>الرديّات والمحاورات والزوامل | مجالس الشعر</title>
+  <link rel="stylesheet" href="/style.css?v=9.0-poetry">
+  <link rel="stylesheet" href="/poetry-theme.css?v=9.0-poetry">
 </head>
 <body class="userApp">
   <header class="topbar">
-    <a class="brand" href="/" aria-label="ساحات عامة">
-      <span class="brandMark">س</span>
-      <span><b>ساحات عامة</b><small>واجهة المستخدم</small></span>
+    <a class="brand" href="/" aria-label="الرديّات والمحاورات والزوامل">
+      <span class="brandMark">❖</span>
+      <span><b>الرديّات والمحاورات والزوامل</b><small>مجالس الشعر الشعبي المباشر</small></span>
     </a>
-    <div class="topSearch"><span>⌕</span><input id="searchInput" placeholder="ابحث في الآراء والتحليلات..."><button id="searchBtn">بحث</button><button class="hidden" id="clearSearchBtn">مسح</button></div>
+    <div class="topSearch"><span>⌕</span><input id="searchInput" placeholder="ابحث عن بيت شعر أو شاعر أو زامل..." aria-label="البحث في الشعر"><button id="searchBtn">بحث</button><button class="hidden" id="clearSearchBtn">مسح</button></div>
     <nav class="topActions">
       <button id="homeBtn">الرئيسية</button>
       <button id="loginBtn" class="primary">دخول</button>
@@ -27,61 +29,47 @@
   </header>
 
   <section class="liveTicker hidden" id="liveTicker"></section>
-  <section class="globalChannels" id="globalChannels">
-    <div class="globalHead">
-      <div><span class="eyebrow">مركز عالمي عام</span><h2>مباشر حول العالم</h2></div>
-      <button id="refreshChannelsBtn">تحديث القنوات</button>
+  <section class="poetryIntro" id="poetryIntro">
+    <div class="poetryIntroCopy">
+      <span class="eyebrow">ديوان الشعر والصوت الحي</span>
+      <h1>للكلمة <em>وزن</em>، وللرد <em>صدى</em>.</h1>
+      <p>مجلس يجمع الشعراء وعشّاق الشعر. اكتب رديّتك، حاور شاعرًا وجهًا لوجه، أو انشر زاملك صوتًا وصورة.</p>
+      <div class="poetryIntroActions"><button class="primary" id="joinPoetryBtn">ادخل مجالس الشعر</button><button id="exploreLiveBtn">تابع المحاورات المباشرة <span>● LIVE</span></button></div>
     </div>
-    <div class="channelLiveRail" id="channelLiveRail"></div>
-    <div class="channelDirectory">
-      <div class="directoryHead"><b>قنوات إخبارية من حول العالم</b><span id="channelTotal" class="muted"></span></div>
-      <div class="channelFilters">
-        <input id="channelSearch" maxlength="80" placeholder="ابحث عن قناة أو دولة أو لغة">
-        <select id="channelRegion"><option value="">كل المناطق</option></select>
-        <select id="channelCountry"><option value="">كل الدول</option></select>
-        <select id="channelLanguage"><option value="">كل اللغات</option></select>
-        <button id="channelLiveOnly">المباشر فقط</button>
-      </div>
-      <div class="channelGrid" id="channelGrid"></div>
-      <button id="loadMoreChannels" class="hidden">عرض المزيد</button>
+    <div class="poetryCategoryCards" id="poetryCategoryCards">
+      <button class="poetryCategoryCard" data-kind="reply"><span class="categoryIcon">✒</span><span class="categoryText"><b>الرديّات</b><small>بيت يقابله بيت، ورد يليق بالقافية</small></span><span class="categoryArrow">←</span></button>
+      <button class="poetryCategoryCard" data-kind="dialogue"><span class="categoryIcon">♬</span><span class="categoryText"><b>المحاورات</b><small>شاعران، مجلس واحد، وجمهور حاضر</small></span><span class="categoryArrow">←</span></button>
+      <button class="poetryCategoryCard" data-kind="zamil"><span class="categoryIcon">◈</span><span class="categoryText"><b>الزوامل</b><small>قصائد تُسمع وتُشاهد وتُحفظ</small></span><span class="categoryArrow">←</span></button>
     </div>
   </section>
-  <section class="channelTheater hidden" id="channelTheater">
-    <div class="theaterHead"><div><b id="theaterChannelName"></b><small id="theaterChannelMeta"></small></div><div class="inline"><button id="minimizeChannelPlayer">تصغير</button><button id="closeChannelPlayer" class="danger">إغلاق</button></div></div>
-    <div class="youtubeFrame" id="youtubeFrame"></div>
-    <div class="theaterInfo"><h3 id="theaterLiveTitle"></h3><p id="theaterFallback" class="muted"></p><div class="inline"><button id="discussChannelBtn" class="primary">ناقش هذا البث</button><a id="openYoutubeBtn" target="_blank" rel="noopener">المشاهدة على YouTube</a><button id="muteChannelBtn">كتم القناة</button></div></div>
-  </section>
-  <section class="miniChannelPlayer hidden" id="miniChannelPlayer">
-    <div id="miniYoutubeFrame"></div>
-    <b id="miniChannelName"></b>
-    <button id="expandMiniPlayer">تكبير</button>
-    <button id="closeMiniPlayer">إغلاق</button>
-  </section>
-  <section class="newsStrip hidden" id="newsStrip"></section>
 
   <div class="shell">
     <aside class="roomsPane">
-      <div class="paneHead"><div><span class="eyebrow">مجتمعات عامة</span><h2>الساحات</h2></div><button class="iconBtn primary hidden" id="newRoomBtn" title="إنشاء غرفة">＋</button></div>
+      <div class="paneHead"><div><span class="eyebrow">مجالس الديوان</span><h2>مجالس الشعراء</h2></div><button class="iconBtn primary hidden" id="newRoomBtn" title="إنشاء مجلس شعري">＋</button></div>
+      <div class="poetryKindTabs" id="poetryKindTabs" aria-label="أنواع الشعر">
+        <button class="active" data-kind="all">الكل</button><button data-kind="reply">رديّات</button><button data-kind="dialogue">محاورات</button><button data-kind="zamil">زوامل</button>
+      </div>
       <div class="roomForm hidden" id="roomForm">
-        <input id="roomNameInput" maxlength="60" placeholder="اسم الغرفة">
-        <textarea id="roomDescInput" maxlength="240" placeholder="وصف مختصر"></textarea>
+        <select id="roomKindInput" aria-label="نوع المجلس"><option value="reply">مجلس رديّات</option><option value="dialogue">ساحة محاورات</option><option value="zamil">ديوان زوامل</option></select>
+        <input id="roomNameInput" maxlength="60" placeholder="اسم المجلس الشعري">
+        <textarea id="roomDescInput" maxlength="240" placeholder="نبذة عن المجلس وما يُلقى فيه"></textarea>
         <div class="inline"><button class="primary" id="saveRoomBtn">حفظ</button><button id="cancelRoomBtn">إلغاء</button></div>
       </div>
       <div class="roomsList" id="rooms"></div>
-      <div class="sideHint"><b>صلاحيات المستخدم</b><span>يمكنك إنشاء غرفك وإدارة أعضائها ومحتواها حسب دورك داخل كل غرفة.</span></div>
+      <div class="sideHint"><b>مجلسك بصوتك</b><span>أنشئ مجلسًا، ادعُ الشعراء، ونظّم الأدوار والبث المباشر كما تشاء.</span></div>
     </aside>
 
     <main class="feedPane">
       <section class="roomHero">
-        <div class="heroText"><span class="eyebrow" id="roomContext">المشهد العام الآن</span><h1 id="roomTitle">كل الساحات</h1><p id="roomDesc">منشورات عامة، غرف صوتية، صور وفيديو، وبث مباشر متعدد المشاركين.</p></div>
+        <div class="heroText"><span class="eyebrow" id="roomContext">جديد الديوان</span><h1 id="roomTitle">جميع مجالس الشعر</h1><p id="roomDesc">رديّات ومحاورات وزوامل بالصوت والصورة، ومجالس مباشرة يلتقي فيها الشعراء.</p></div>
         <div class="heroActions"><button id="manageRoomBtn" class="hidden">إدارة الغرفة</button></div>
       </section>
 
       <section class="composer hidden" id="composer">
-        <div class="composerTop"><span class="avatar" id="composerAvatar">أ</span><textarea id="postText" maxlength="4000" placeholder="ما رأيك في الموضوع؟"></textarea></div>
+        <div class="composerTop"><span class="avatar" id="composerAvatar">✒</span><textarea id="postText" maxlength="4000" placeholder="اكتب أبياتك، رديّتك أو زاملك هنا..." aria-label="نص القصيدة"></textarea></div>
         <div class="mediaPreview" id="mediaPreview"></div>
         <div class="composerBottom">
-          <label class="filePick">▣ صورة / فيديو<input id="postMedia" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
+          <label class="filePick">▣ صورة / فيديو زامل<input id="postMedia" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
           <span class="muted" id="mediaInfo">حتى 4 ملفات، 200MB للملف</span>
           <select id="postRoom"></select>
           <button class="primary" id="publishBtn">نشر</button>
@@ -94,7 +82,7 @@
     <aside class="livePane">
       <section class="liveCard voiceCard">
         <div class="cardTitle"><div><span class="statusDot"></span><b>الغرفة الصوتية</b></div><span class="counter" id="voiceCount">0</span></div>
-        <p class="muted" id="voiceStatus">اختر ساحة ثم ادخل الغرفة الصوتية.</p>
+        <p class="muted" id="voiceStatus">اختر مجلسًا ثم ادخل الغرفة الصوتية.</p>
         <div class="participantList" id="voiceParticipants"></div>
         <div class="rtActions">
           <button id="joinVoiceBtn" class="primary">دخول صوتي</button>
@@ -105,7 +93,7 @@
       </section>
 
       <section class="liveCard videoCard">
-        <div class="cardTitle"><div><span class="livePill">LIVE</span><b>البث المباشر</b></div><span class="counter" id="liveViewerCount">0</span></div>
+        <div class="cardTitle"><div><span class="livePill">LIVE</span><b>بث المحاورات والزوامل</b></div><span class="counter" id="liveViewerCount">0</span></div>
         <div id="liveTopicTitleView" class="liveTopicTitleView hidden"></div>
         <p class="muted" id="liveStatus">لا يوجد بث مباشر الآن</p>
         <div class="rtActions">
@@ -116,11 +104,9 @@
           <button id="liveShareBtn" class="hidden">مشاركة البث</button>
           <button id="requestGuestBtn" class="hidden">طلب مشاركة</button>
           <div class="liveTopicTools hidden" id="liveTopicTools">
-            <input id="liveTopicTitleInput" class="liveTopicTitleInput hidden" maxlength="120" placeholder="عنوان الحوار">
-            <label id="liveTopicPick" class="liveTopicPick hidden"><span id="liveTopicPickText">تحميل مقطع الحوار</span><input id="liveTopicMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
-            <button id="liveTopicUploadBtn" class="hidden primary">إرسال مقطع الحوار</button>
-            <select id="liveTopicChannelSelect" class="liveTopicChannelSelect hidden"><option value="">قناة الحوار</option></select>
-            <button id="liveTopicChannelBtn" class="hidden primary">إرسال قناة الحوار</button>
+            <input id="liveTopicTitleInput" class="liveTopicTitleInput hidden" maxlength="120" placeholder="عنوان المحاورة أو الزامل">
+            <label id="liveTopicPick" class="liveTopicPick hidden"><span id="liveTopicPickText">إرفاق قصيدة أو مقطع</span><input id="liveTopicMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"></label>
+            <button id="liveTopicUploadBtn" class="hidden primary">عرض المقطع في البث</button>
             <button id="liveTopicPlayBtn" class="hidden">إيقاف الفيديو</button>
             <button id="liveTopicMuteBtn" class="hidden">صوت الملف</button>
             <button id="clearLiveTopicBtn" class="hidden">إزالة الموضوع</button>
@@ -135,15 +121,15 @@
       </section>
 
       <section class="chatCard">
-        <div class="cardTitle"><b>دردشة الساحة</b></div>
-        <div class="chatNotice" id="chatNotice">اختر ساحة لفتح الدردشة.</div>
+        <div class="cardTitle"><b>دردشة المجلس</b></div>
+        <div class="chatNotice" id="chatNotice">اختر مجلسًا لفتح الدردشة.</div>
         <div class="chatBox" id="chatBox"></div>
         <div class="chatSend hidden" id="chatSend"><input id="chatInput" maxlength="1000" placeholder="اكتب رسالة..."><button class="primary" id="chatBtn">إرسال</button></div>
       </section>
     </aside>
   </div>
 
-  <div class="modal hidden" id="modal"><div class="modalCard authCard"><button class="close" id="closeModal">×</button><span class="eyebrow">ساحات عامة</span><h2 id="modalTitle">تسجيل الدخول</h2><input id="authName" maxlength="24" placeholder="اسم المستخدم"><input id="displayName" class="hidden" maxlength="40" placeholder="الاسم الظاهر"><input id="authPass" maxlength="128" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)"><button class="primary wide" id="authSubmit">دخول</button><button class="link" id="switchAuth">إنشاء حساب جديد</button><p class="error" id="authError"></p></div></div>
+  <div class="modal hidden" id="modal"><div class="modalCard authCard"><button class="close" id="closeModal">×</button><span class="eyebrow">مجالس الرديّات والمحاورات والزوامل</span><h2 id="modalTitle">تسجيل الدخول</h2><input id="authName" maxlength="24" placeholder="اسم المستخدم"><input id="displayName" class="hidden" maxlength="40" placeholder="الاسم الظاهر"><input id="authPass" maxlength="128" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)"><button class="primary wide" id="authSubmit">دخول</button><button class="link" id="switchAuth">إنشاء حساب جديد</button><p class="error" id="authError"></p></div></div>
 
   <div class="modal hidden" id="roomManageModal"><div class="modalCard manageCard"><button class="close" id="closeRoomManage">×</button><span class="eyebrow">صلاحيات الغرفة</span><h2 id="manageRoomTitle">إدارة الغرفة</h2><div class="manageGrid"><section><h3>إضافة عضو</h3><div class="inline"><input id="memberUsername" placeholder="اسم المستخدم"><select id="memberRole"><option value="member">عضو</option><option value="moderator">مشرف غرفة</option></select><button class="primary" id="addMemberBtn">إضافة</button></div></section><section><h3>حالة الغرفة</h3><div class="inline"><button id="openRoomBtn">فتح الغرفة</button><button id="closeRoomBtn" class="danger">إغلاق الغرفة</button></div></section></div><div class="memberList" id="memberList"></div></div></div>
 
@@ -154,6 +140,6 @@
 
   <div class="toast hidden" id="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=8.1-general"></script>
+  <script src="/app.js?v=9.0-poetry"></script>
 </body>
 </html>

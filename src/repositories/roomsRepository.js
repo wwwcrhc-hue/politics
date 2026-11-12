@@ -3,7 +3,7 @@
 function createRoomsRepository({ pool, userFromRow }) {
   async function listRooms() {
     const { rows } = await pool.query(`
-      select r.id, r.name, r.description, r.owner_user_id, r.status, r.source_channel_id, r.source_youtube_video_id, r.created_at,
+      select r.id, r.name, r.description, r.poetry_kind, r.owner_user_id, r.status, r.created_at,
         u.id as user_id,
         u.username, u.display_name, u.bio, u.role, u.created_at as user_created_at,
         count(distinct p.id) as posts,
@@ -12,16 +12,18 @@ function createRoomsRepository({ pool, userFromRow }) {
       left join users u on u.id = r.owner_user_id
       left join posts p on p.room_id = r.id
       left join room_messages m on m.room_id = r.id
+      where r.poetry_kind in ('reply', 'dialogue', 'zamil')
       group by r.id, u.id
-      order by case when r.owner_user_id is null then 0 else 1 end, r.created_at asc, r.id asc
+      order by case r.poetry_kind when 'reply' then 1 when 'dialogue' then 2 else 3 end,
+        case when r.owner_user_id is null then 0 else 1 end, r.created_at asc, r.id asc
     `);
     return rows;
   }
 
   async function createRoom(room) {
     await pool.query(
-      'insert into rooms (id, name, description, owner_user_id, source_channel_id, source_youtube_video_id, created_at) values ($1, $2, $3, $4, $5, $6, $7)',
-      [room.id, room.name, room.description, room.ownerUserId, room.sourceChannelId || null, room.sourceYoutubeVideoId || '', room.createdAt]
+      'insert into rooms (id, name, description, poetry_kind, owner_user_id, created_at) values ($1, $2, $3, $4, $5, $6)',
+      [room.id, room.name, room.description, room.poetryKind, room.ownerUserId, room.createdAt]
     );
   }
 

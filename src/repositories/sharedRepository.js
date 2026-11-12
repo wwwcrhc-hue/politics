@@ -7,12 +7,12 @@ function createSharedRepository({ pool, userFromRow }) {
   }
 
   async function roomExists(roomId) {
-    const { rowCount } = await pool.query('select 1 from rooms where id = $1', [roomId]);
+    const { rowCount } = await pool.query('select 1 from rooms where id = $1 and poetry_kind in (\'reply\',\'dialogue\',\'zamil\')', [roomId]);
     return rowCount > 0;
   }
 
   async function getRoomById(roomId) {
-    const { rows } = await pool.query('select * from rooms where id = $1', [roomId]);
+    const { rows } = await pool.query('select * from rooms where id = $1 and poetry_kind in (\'reply\',\'dialogue\',\'zamil\')', [roomId]);
     return rows[0] || null;
   }
 
@@ -35,6 +35,7 @@ function createSharedRepository({ pool, userFromRow }) {
         count(distinct c.id) as comments_count,
         bool_or(case when l.user_id = $2 then true else false end) as liked_by_me
       from posts p
+      join rooms r on r.id = p.room_id and r.poetry_kind in ('reply','dialogue','zamil')
       join users u on u.id = p.user_id
       left join likes l on l.post_id = p.id
       left join comments c on c.post_id = p.id

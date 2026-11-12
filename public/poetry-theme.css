@@ -1,0 +1,184 @@
+/* The poetry visual layer intentionally keeps the existing WebRTC layout intact. */
+:root {
+  --bg: #100d0b;
+  --panel: #1b1712;
+  --panel2: #231b14;
+  --line: #352a1e;
+  --text: #f9f2e5;
+  --muted: #b0a391;
+  --gold: #dbac61;
+  --gold2: #f1d399;
+  --blue: #c8a36b;
+  --shadow: 0 20px 60px rgba(6, 4, 2, .32);
+}
+
+html { background: var(--bg); }
+body.userApp {
+  background:
+    radial-gradient(circle at 80% -10%, rgba(171, 113, 39, .2), transparent 31%),
+    radial-gradient(circle at 8% 26%, rgba(108, 67, 37, .11), transparent 30%),
+    #100d0b;
+}
+.topbar {
+  background: rgba(16, 13, 11, .94);
+  border-color: rgba(224, 176, 104, .13);
+  grid-template-columns: minmax(260px, 330px) minmax(220px, 540px) 1fr;
+}
+.brand { min-width: 0; }
+.brandMark {
+  background: linear-gradient(145deg, #f4dba9, #b17b3b);
+  color: #1b130a;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  font-size: 27px;
+}
+.brand b { font-size: 15px; line-height: 1.45; }
+.brand small { font-size: 10px; letter-spacing: .03em; }
+.topSearch { background: #17120e; border-color: #453523; }
+.topSearch input::placeholder { color: #978a77; }
+button:not(.primary):hover { border-color: #725331; background: #2a2118; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid #f4cb86;
+  outline-offset: 3px;
+}
+
+.poetryIntro {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+  gap: clamp(20px, 4vw, 60px);
+  align-items: center;
+  max-width: 1660px;
+  min-height: 328px;
+  margin: 18px auto 0;
+  padding: clamp(24px, 3.6vw, 52px);
+  border: 1px solid #654a27;
+  border-radius: 26px;
+  background: radial-gradient(circle at 100% 0, rgba(224, 177, 96, .16), transparent 52%),
+    linear-gradient(120deg, #292015, #19140f 65%, #241a11);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.poetryIntro::before {
+  content: '✦';
+  position: absolute;
+  z-index: -1;
+  left: -34px;
+  top: -125px;
+  font-size: 390px;
+  line-height: 1;
+  color: rgba(211, 162, 86, .045);
+  transform: rotate(-14deg);
+  pointer-events: none;
+}
+.poetryIntroCopy { max-width: 690px; }
+.poetryIntro .eyebrow { font-weight: 800; letter-spacing: .13em; }
+.poetryIntro h1 {
+  font-family: Georgia, 'Times New Roman', Tahoma, serif;
+  font-size: clamp(34px, 3.7vw, 62px);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -.035em;
+  margin: 14px 0 12px;
+}
+.poetryIntro h1 em { font-style: normal; color: var(--gold2); }
+.poetryIntroCopy p { color: #c9bca7; max-width: 580px; line-height: 2; font-size: 15px; }
+.poetryIntroActions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+.poetryIntroActions button { min-height: 46px; padding-inline: 20px; font-weight: 800; }
+.poetryIntroActions #exploreLiveBtn { border-color: rgba(241, 211, 153, .25); background: rgba(255, 255, 255, .04); }
+.poetryIntroActions #exploreLiveBtn span { color: #f87979; font-size: 10px; margin-inline-start: 4px; }
+.poetryCategoryCards { display: grid; gap: 10px; }
+.poetryCategoryCard {
+  position: relative;
+  width: 100%;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-height: 76px;
+  border-radius: 17px;
+  border: 1px solid rgba(231, 186, 116, .2);
+  padding: 13px 16px;
+  background: rgba(11, 9, 7, .48);
+  text-align: right;
+}
+.poetryCategoryCard:hover, .poetryCategoryCard.active {
+  border-color: rgba(237, 192, 114, .75);
+  background: rgba(219, 172, 97, .14);
+}
+.categoryIcon {
+  display: grid;
+  flex: 0 0 48px;
+  place-items: center;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid #664727;
+  background: #382815;
+  color: var(--gold2);
+  font-size: 25px;
+}
+.categoryText { display: grid; gap: 4px; flex: 1; }
+.categoryText b { color: #fff7e9; font-size: 17px; }
+.categoryText small { color: #b9ab96; font-size: 12px; line-height: 1.5; }
+.categoryArrow { font-size: 22px; color: var(--gold2); }
+
+.poetryKindTabs { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; margin-top: 18px; }
+.poetryKindTabs button { padding: 9px 5px; font-size: 12px; border-color: #443321; }
+.poetryKindTabs button.active { background: rgba(219,172,97,.18); border-color: var(--gold); color: var(--gold2); font-weight: 900; }
+.roomsPane,.liveCard,.chatCard,.roomHero,.composer,.post {
+  background: linear-gradient(180deg, rgba(35, 27, 20, .96), rgba(21, 17, 14, .96));
+  border-color: rgba(219, 172, 97, .12);
+}
+.roomForm input,.roomForm textarea,.roomForm select,.composerBottom select {
+  border: 1px solid #443322;
+  background: #17120e;
+  color: #f9f2e5;
+  border-radius: 11px;
+  padding: 10px;
+}
+.roomForm select { width: 100%; }
+.roomItem { background: #18130e; border-color: #33271b; }
+.roomItem.active { background: #312314; border-color: #b88b4b; }
+.roomBtn { display: grid; justify-content: stretch; gap: 5px; }
+.roomBtn>span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.poetryRoomType { width: max-content; display: block; border-radius: 6px; background: #342718; color: var(--gold2)!important; padding: 3px 7px; }
+.roomsList { gap: 9px; }
+.sideHint { border-color: #493722; background: rgba(219,172,97,.07); }
+.roomHero { border-top: 3px solid #b99055; }
+.roomHero h1 { font-size: clamp(23px, 2.2vw, 31px); }
+.roomHero p { color: #bdae99; }
+.postText { font-size: 18px; line-height: 2.2; font-family: Georgia, 'Times New Roman', Tahoma, serif; }
+.post .roomTag { display: inline-block; background: rgba(219,172,97,.12); border-radius: 8px; padding: 5px 9px; }
+.post .author { color: #fff4db; }
+.composer textarea::placeholder { color: #8e806b; }
+.liveCard .cardTitle b { color: #f6e9d1; }
+.livePill { box-shadow: 0 0 0 3px rgba(240,56,71,.1); }
+.liveTicker { max-width: 1660px; }
+.liveTickerItem { border-color: rgba(214,166,94,.3); background: #251a12; }
+.videoCard { background: linear-gradient(180deg,#1b1510,#0d0b09); }
+
+@media (max-width: 1180px) {
+  .topbar { grid-template-columns: minmax(240px, 300px) 1fr; }
+  .poetryIntro { grid-template-columns: minmax(0,1fr); }
+  .poetryCategoryCards { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .poetryCategoryCard { flex-wrap: wrap; align-content: start; }
+  .categoryArrow { display: none; }
+}
+@media (max-width: 760px) {
+  .topbar { display: flex; }
+  .brand b { font-size: 12px; }
+  .poetryIntro { border-radius: 18px; margin: 8px 10px 0; padding: 24px 18px; }
+  .poetryIntro h1 { font-size: clamp(29px,8vw,38px); }
+  .poetryIntroCopy p { font-size: 13px; }
+  .poetryCategoryCards { grid-template-columns: 1fr; }
+  .poetryCategoryCard { flex-wrap: nowrap; min-height: 62px; }
+  .categoryIcon { height: 40px; flex-basis: 40px; font-size: 20px; }
+  .categoryArrow { display: block; }
+  .roomsList { display: grid; max-height: 275px; overflow: auto; }
+  .roomItem { min-width: 0; }
+  .poetryKindTabs { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .poetryKindTabs button { font-size: 10px; padding-inline: 2px; }
+  .poetryIntroActions button { width: 100%; }
+  .postText { font-size: 17px; }
+}

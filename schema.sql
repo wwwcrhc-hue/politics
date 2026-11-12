@@ -1,4 +1,4 @@
--- Supabase/PostgreSQL schema for political-forums-app v5.
+-- PostgreSQL schema for the poetry replies, dialogues and zawamil platform.
 
 create table if not exists app_meta (
   key text primary key,
@@ -53,6 +53,17 @@ alter table rooms
 
 create index if not exists rooms_owner_created_idx
   on rooms (owner_user_id, created_at desc);
+
+-- Existing political rooms remain in the database for rollback, but are invisible
+-- to the poetry application because their poetry_kind stays NULL.
+alter table rooms add column if not exists poetry_kind text;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'rooms_poetry_kind_check') then
+    alter table rooms add constraint rooms_poetry_kind_check
+      check (poetry_kind is null or poetry_kind in ('reply','dialogue','zamil'));
+  end if;
+end $$;
+create index if not exists rooms_poetry_kind_idx on rooms(poetry_kind, created_at desc);
 
 create table if not exists posts (
   id text primary key,
@@ -181,17 +192,14 @@ on conflict (key) do update
 set value = excluded.value,
     updated_at = now();
 
-insert into rooms (id, name, description) values
-  ('local', 'الساحة العامة', 'نقاشات يومية ومواضيع مفتوحة للمجتمع.'),
-  ('gulf', 'مجلس الخليج', 'حوارات عامة حول شؤون الخليج والمجتمع.'),
-  ('arab', 'العالم العربي', 'نقاشات عامة حول اهتمامات المنطقة العربية.'),
-  ('world', 'العالم', 'حوارات عالمية وموضوعات من مختلف الدول.'),
-  ('elections', 'الفعاليات', 'متابعة الفعاليات والمناسبات والبرامج العامة.'),
-  ('economy', 'الأعمال والاقتصاد', 'نقاشات الأعمال والأسواق والحياة الاقتصادية.'),
-  ('debates', 'المناظرات والحوار', 'حوارات مباشرة وآراء متعددة حول مختلف المواضيع.')
+insert into rooms (id, name, description, poetry_kind) values
+  ('poetry-replies', 'مجلس الرديّات', 'ابدأ قصيدةً وأكمل الرديّة بيتًا ببيت، مع المحافظة على القافية والوزن.', 'reply'),
+  ('poetry-dialogues', 'ساحة المحاورات', 'محاورات شعرية مباشرة بين الشعراء، مع بث صوتي ومرئي وتفاعل الجمهور.', 'dialogue'),
+  ('poetry-zawamil', 'ديوان الزوامل', 'زوامل وقصائد أداء قبلي واجتماعي، نصًا وصوتًا وفيديو.', 'zamil')
 on conflict (id) do update
 set name = excluded.name,
-    description = excluded.description;
+    description = excluded.description,
+    poetry_kind = excluded.poetry_kind;
 
 -- v9: room permissions and moderation (no audio/video recording)
 alter table rooms add column if not exists status text not null default 'active';
@@ -232,168 +240,8 @@ create index if not exists moderation_logs_room_idx on moderation_logs(room_id,c
 insert into app_meta (key,value) values ('schema','{"version":9}'::jsonb)
 on conflict(key) do update set value=excluded.value,updated_at=now();
 
--- v11: global official news channel directory and YouTube live cache.
-create table if not exists countries (
-  id text primary key,
-  iso2 text not null unique,
-  iso3 text not null unique,
-  name_ar text not null,
-  name_en text not null,
-  name_native text not null default '',
-  region text not null,
-  flag text not null default '',
-  is_active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-create index if not exists countries_region_idx on countries(region, name_en);
-
-create table if not exists languages (
-  id text primary key,
-  code text not null unique,
-  name_native text not null,
-  name_ar text not null,
-  name_en text not null,
-  direction text not null default 'ltr',
-  is_active boolean not null default true,
-  constraint languages_direction_check check (direction in ('rtl','ltr'))
-);
-
-create table if not exists news_channels (
-  id text primary key,
-  name text not null,
-  name_local text not null default '',
-  name_en text not null default '',
-  slug text not null unique,
-  country_id text references countries(id) on delete set null,
-  language_id text references languages(id) on delete set null,
-  youtube_channel_id text not null default '',
-  youtube_url text not null default '',
-  website_url text not null default '',
-  logo_url text not null default '',
-  category text not null default 'news',
-  is_official boolean not null default true,
-  is_verified boolean not null default false,
-  is_active boolean not null default true,
-  priority int not null default 0,
-  manual_video_id text not null default '',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-create index if not exists news_channels_country_idx on news_channels(country_id, priority desc);
-create index if not exists news_channels_language_idx on news_channels(language_id, priority desc);
-create index if not exists news_channels_active_priority_idx on news_channels(is_active, priority desc);
-
-create table if not exists channel_live_cache (
-  channel_id text primary key references news_channels(id) on delete cascade,
-  youtube_video_id text not null default '',
-  title text not null default '',
-  thumbnail text not null default '',
-  is_live boolean not null default false,
-  is_embeddable boolean not null default true,
-  viewer_count bigint,
-  checked_at timestamptz not null default now(),
-  expires_at timestamptz not null default now(),
-  started_at timestamptz
-);
-create index if not exists channel_live_cache_live_idx on channel_live_cache(is_live, viewer_count desc, checked_at desc);
-create index if not exists channel_live_cache_expires_idx on channel_live_cache(expires_at);
-
-create table if not exists channel_follows (
-  user_id text not null references users(id) on delete cascade,
-  channel_id text not null references news_channels(id) on delete cascade,
-  created_at timestamptz not null default now(),
-  primary key(user_id, channel_id)
-);
-create index if not exists channel_follows_channel_idx on channel_follows(channel_id, created_at desc);
-
-alter table rooms add column if not exists source_channel_id text references news_channels(id) on delete set null;
-alter table rooms add column if not exists source_youtube_video_id text not null default '';
-create index if not exists rooms_source_channel_idx on rooms(source_channel_id, created_at desc);
-
-insert into countries (id, iso2, iso3, name_ar, name_en, name_native, region, flag) values
-  ('world', 'WW', 'WWW', 'عالمي', 'World', 'World', 'دولي', '🌐'),
-  ('qa', 'QA', 'QAT', 'قطر', 'Qatar', 'قطر', 'الشرق الأوسط', '🇶🇦'),
-  ('sa', 'SA', 'SAU', 'السعودية', 'Saudi Arabia', 'السعودية', 'الشرق الأوسط', '🇸🇦'),
-  ('ae', 'AE', 'ARE', 'الإمارات', 'United Arab Emirates', 'الإمارات', 'الشرق الأوسط', '🇦🇪'),
-  ('gb', 'GB', 'GBR', 'المملكة المتحدة', 'United Kingdom', 'United Kingdom', 'أوروبا', '🇬🇧'),
-  ('fr', 'FR', 'FRA', 'فرنسا', 'France', 'France', 'أوروبا', '🇫🇷'),
-  ('de', 'DE', 'DEU', 'ألمانيا', 'Germany', 'Deutschland', 'أوروبا', '🇩🇪'),
-  ('tr', 'TR', 'TUR', 'تركيا', 'Turkey', 'Türkiye', 'آسيا', '🇹🇷'),
-  ('us', 'US', 'USA', 'الولايات المتحدة', 'United States', 'United States', 'أمريكا الشمالية', '🇺🇸'),
-  ('jp', 'JP', 'JPN', 'اليابان', 'Japan', '日本', 'آسيا', '🇯🇵'),
-  ('in', 'IN', 'IND', 'الهند', 'India', 'भारत', 'آسيا', '🇮🇳'),
-  ('cn', 'CN', 'CHN', 'الصين', 'China', '中国', 'آسيا', '🇨🇳'),
-  ('kr', 'KR', 'KOR', 'كوريا الجنوبية', 'South Korea', '대한민국', 'آسيا', '🇰🇷'),
-  ('au', 'AU', 'AUS', 'أستراليا', 'Australia', 'Australia', 'أوقيانوسيا', '🇦🇺')
-on conflict (id) do update set
-  iso2=excluded.iso2, iso3=excluded.iso3, name_ar=excluded.name_ar, name_en=excluded.name_en,
-  name_native=excluded.name_native, region=excluded.region, flag=excluded.flag, updated_at=now();
-
-insert into languages (id, code, name_native, name_ar, name_en, direction) values
-  ('ar', 'ar', 'العربية', 'العربية', 'Arabic', 'rtl'),
-  ('en', 'en', 'English', 'الإنجليزية', 'English', 'ltr'),
-  ('fr', 'fr', 'Français', 'الفرنسية', 'French', 'ltr'),
-  ('de', 'de', 'Deutsch', 'الألمانية', 'German', 'ltr'),
-  ('tr', 'tr', 'Türkçe', 'التركية', 'Turkish', 'ltr'),
-  ('ja', 'ja', '日本語', 'اليابانية', 'Japanese', 'ltr'),
-  ('hi', 'hi', 'हिन्दी', 'الهندية', 'Hindi', 'ltr'),
-  ('zh', 'zh', '中文', 'الصينية', 'Chinese', 'ltr'),
-  ('ko', 'ko', '한국어', 'الكورية', 'Korean', 'ltr')
-on conflict (id) do update set
-  code=excluded.code, name_native=excluded.name_native, name_ar=excluded.name_ar,
-  name_en=excluded.name_en, direction=excluded.direction;
-
-insert into news_channels (id, name, name_local, name_en, slug, country_id, language_id, youtube_url, website_url, category, is_official, is_verified, priority) values
-  ('aljazeera-ar', 'الجزيرة', 'الجزيرة', 'Al Jazeera Arabic', 'aljazeera-ar', 'qa', 'ar', 'https://www.youtube.com/@aljazeera', 'https://www.aljazeera.net', 'news', true, false, 95),
-  ('aljazeera-mubasher', 'الجزيرة مباشر', 'الجزيرة مباشر', 'Al Jazeera Mubasher', 'aljazeera-mubasher', 'qa', 'ar', 'https://www.youtube.com/@ajmubasher', 'https://mubasher.aljazeera.net', 'news', true, false, 94),
-  ('alarabiya', 'العربية', 'العربية', 'Al Arabiya', 'alarabiya', 'ae', 'ar', 'https://www.youtube.com/@AlArabiya', 'https://www.alarabiya.net', 'news', true, false, 93),
-  ('alhadath', 'الحدث', 'الحدث', 'Al Hadath', 'alhadath', 'ae', 'ar', 'https://www.youtube.com/@AlHadath', 'https://www.alhadath.net', 'news', true, false, 92),
-  ('saudi-ekhbariya', 'الإخبارية السعودية', 'الإخبارية', 'Saudi Al Ekhbariya', 'saudi-ekhbariya', 'sa', 'ar', '', 'https://www.alekhbariya.net', 'news', true, false, 88),
-  ('skynewsarabia', 'سكاي نيوز عربية', 'سكاي نيوز عربية', 'Sky News Arabia', 'skynewsarabia', 'ae', 'ar', 'https://www.youtube.com/@skynewsarabia', 'https://www.skynewsarabia.com', 'news', true, false, 87),
-  ('bbc-arabic', 'BBC News عربي', 'BBC News عربي', 'BBC Arabic', 'bbc-arabic', 'gb', 'ar', 'https://www.youtube.com/@BBCArabic', 'https://www.bbc.com/arabic', 'news', true, false, 86),
-  ('france24-ar', 'France 24 عربي', 'فرانس 24 عربي', 'France 24 Arabic', 'france24-ar', 'fr', 'ar', 'https://www.youtube.com/@France24_ar', 'https://www.france24.com/ar', 'news', true, false, 85),
-  ('dw-ar', 'DW عربية', 'DW عربية', 'DW Arabic', 'dw-ar', 'de', 'ar', 'https://www.youtube.com/@dw_arabic', 'https://www.dw.com/ar', 'news', true, false, 84),
-  ('trt-arabi', 'TRT عربي', 'TRT عربي', 'TRT Arabic', 'trt-arabi', 'tr', 'ar', 'https://www.youtube.com/@TRTArabi', 'https://www.trtarabi.com', 'news', true, false, 83),
-  ('bbc-news', 'BBC News', 'BBC News', 'BBC News', 'bbc-news', 'gb', 'en', 'https://www.youtube.com/@BBCNews', 'https://www.bbc.com/news', 'news', true, false, 92),
-  ('cnn', 'CNN', 'CNN', 'CNN', 'cnn', 'us', 'en', 'https://www.youtube.com/@CNN', 'https://www.cnn.com', 'news', true, false, 90),
-  ('reuters', 'Reuters', 'Reuters', 'Reuters', 'reuters', 'gb', 'en', 'https://www.youtube.com/@Reuters', 'https://www.reuters.com', 'news', true, false, 89),
-  ('france24-en', 'France 24 English', 'France 24 English', 'France 24 English', 'france24-en', 'fr', 'en', 'https://www.youtube.com/@France24_en', 'https://www.france24.com/en', 'news', true, false, 86),
-  ('dw-news', 'DW News', 'DW News', 'DW News', 'dw-news', 'de', 'en', 'https://www.youtube.com/@dwnews', 'https://www.dw.com', 'news', true, false, 85),
-  ('trt-world', 'TRT World', 'TRT World', 'TRT World', 'trt-world', 'tr', 'en', 'https://www.youtube.com/@TRTWorld', 'https://www.trtworld.com', 'news', true, false, 84),
-  ('nhk-world', 'NHK World', 'NHK World', 'NHK World', 'nhk-world', 'jp', 'en', 'https://www.youtube.com/@NHKWORLDJAPAN', 'https://www3.nhk.or.jp/nhkworld', 'news', true, false, 83),
-  ('abc-australia', 'ABC Australia', 'ABC Australia', 'ABC Australia', 'abc-australia', 'au', 'en', 'https://www.youtube.com/@abcnewsaustralia', 'https://www.abc.net.au/news', 'news', true, false, 82)
-on conflict (id) do update set
-  name=excluded.name, name_local=excluded.name_local, name_en=excluded.name_en,
-  country_id=excluded.country_id, language_id=excluded.language_id, youtube_url=excluded.youtube_url,
-  website_url=excluded.website_url, category=excluded.category, is_official=excluded.is_official,
-  priority=excluded.priority, updated_at=now();
-
-insert into news_channels (id, name, name_local, name_en, slug, country_id, language_id, youtube_channel_id, youtube_url, website_url, logo_url, category, is_official, is_verified, priority, manual_video_id) values
-  ('aljazeera-en', 'Al Jazeera English', 'Al Jazeera English', 'Al Jazeera English', 'aljazeera-en', 'qa', 'en', 'UCNye-wNBqNL5ZzHSJj3l8Bg', 'https://www.youtube.com/@aljazeeraenglish', 'https://www.aljazeera.com', 'https://www.google.com/s2/favicons?domain=aljazeera.com&sz=128', 'news', true, true, 91, ''),
-  ('france24-ar', 'France 24 عربي', 'فرانس 24 عربي', 'France 24 Arabic', 'france24-ar', 'fr', 'ar', 'UCdTyuXgmJkG_O8_75eqej-w', 'https://www.youtube.com/@FRANCE24Arabic', 'https://www.france24.com/ar', 'https://www.google.com/s2/favicons?domain=france24.com&sz=128', 'news', true, true, 85, '5FgLgl0MmGA')
-on conflict (id) do update set
-  youtube_channel_id=excluded.youtube_channel_id, youtube_url=excluded.youtube_url,
-  website_url=excluded.website_url, logo_url=excluded.logo_url, is_verified=excluded.is_verified,
-  priority=excluded.priority, manual_video_id=excluded.manual_video_id, updated_at=now();
-
-update news_channels set youtube_channel_id='UCfiwzLy-8yKzIbsmZTzxDgw', logo_url='https://www.google.com/s2/favicons?domain=aljazeera.net&sz=128', is_verified=true, manual_video_id='N8xxOD0nT1Y' where id='aljazeera-ar';
-update news_channels set youtube_channel_id='UCCv1Pd24oPErw5S7zJWltnQ', logo_url='https://www.google.com/s2/favicons?domain=aljazeeramubasher.net&sz=128', is_verified=true where id='aljazeera-mubasher';
-update news_channels set youtube_channel_id='UCahpxixMCwoANAftn6IxkTg', logo_url='https://www.google.com/s2/favicons?domain=alarabiya.net&sz=128', is_verified=true, manual_video_id='n7eQejkXbnM' where id='alarabiya';
-update news_channels set youtube_channel_id='UCrj5BGAhtWxDfqbza9T9hqA', logo_url='https://www.google.com/s2/favicons?domain=alhadath.net&sz=128', is_verified=true, manual_video_id='2YkEX2Z8Vds' where id='alhadath';
-update news_channels set youtube_channel_id='UCV01ajGl6nt09h40iDoHDNg', logo_url='https://www.google.com/s2/favicons?domain=alekhbariya.net&sz=128', is_verified=true where id='saudi-ekhbariya';
-update news_channels set youtube_channel_id='UCIJXOvggjKtCagMfxvcCzAA', logo_url='https://www.google.com/s2/favicons?domain=skynewsarabia.com&sz=128', is_verified=true where id='skynewsarabia';
-update news_channels set logo_url='https://www.google.com/s2/favicons?domain=bbc.com&sz=128' where id='bbc-arabic';
-update news_channels set youtube_channel_id='UC30ditU5JI16o5NbFsHde_Q', logo_url='https://www.google.com/s2/favicons?domain=dw.com&sz=128', is_verified=true where id='dw-ar';
-update news_channels set youtube_channel_id='UC5GvVahlgulCyo4cshSmbcg', logo_url='https://www.google.com/s2/favicons?domain=trtarabi.com&sz=128', is_verified=true where id='trt-arabi';
-update news_channels set youtube_channel_id='UC16niRr50-MSBwiO3YDb3RA', logo_url='https://www.google.com/s2/favicons?domain=bbc.com&sz=128', is_verified=true where id='bbc-news';
-update news_channels set youtube_channel_id='UCupvZG-5ko_eiXAupbDfxWw', logo_url='https://www.google.com/s2/favicons?domain=cnn.com&sz=128', is_verified=true where id='cnn';
-update news_channels set youtube_channel_id='UChqUTb7kYRX8-EiaN3XFrSQ', logo_url='https://www.google.com/s2/favicons?domain=reuters.com&sz=128', is_verified=true where id='reuters';
-update news_channels set youtube_channel_id='UCQfwfsi5VrQ8yKZ-UWmAEFg', logo_url='https://www.google.com/s2/favicons?domain=france24.com&sz=128', is_verified=true, manual_video_id='9c_Bac-17Rk' where id='france24-en';
-update news_channels set youtube_channel_id='UCknLrEdhRCp1aegoMqRaCZg', logo_url='https://www.google.com/s2/favicons?domain=dw.com&sz=128', is_verified=true where id='dw-news';
-update news_channels set youtube_channel_id='UC7fWeaHhqgM4Ry-RMpM2YYw', logo_url='https://www.google.com/s2/favicons?domain=trtworld.com&sz=128', is_verified=true where id='trt-world';
-update news_channels set youtube_channel_id='UCSPEjw8F2nQDtmUKPFNF7_A', logo_url='https://www.google.com/s2/favicons?domain=www3.nhk.or.jp&sz=128', is_verified=true, manual_video_id='IimtbuqYIE8' where id='nhk-world';
-update news_channels set youtube_channel_id='UCVgO39Bk5sMo66-6o6Spn6Q', logo_url='https://www.google.com/s2/favicons?domain=abc.net.au&sz=128', is_verified=true, manual_video_id='vOTiJkg1voo' where id='abc-australia';
-
-insert into app_meta (key,value) values ('schema','{"version":11}'::jsonb)
-on conflict(key) do update set value=excluded.value,updated_at=now();
+-- v12: poetry-only public areas. Legacy rooms and news rows are retained only in
+-- existing databases for safe rollback; the running application no longer exposes them.
+insert into app_meta (key, value)
+values ('schema', '{"version":12,"site":"poetry"}'::jsonb)
+on conflict (key) do update set value=excluded.value, updated_at=now();

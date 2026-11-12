@@ -1,0 +1,10 @@
+:root { --bg:#100d0b; --panel:#211912; --panel2:#2b2117; --line:#433121; --text:#fff4e5; --muted:#b2a38f; --gold:#e0b570; --blue:#caa86c; }
+body { background:radial-gradient(circle at 78% -10%,rgba(217,169,94,.13),transparent 34%),#100d0b; }
+.side { background:#17120e; border-color:#503923; }
+.logo>span { background:linear-gradient(145deg,#f4dba9,#b17b3b); color:#201408; }
+.logo b { font-size:13px; line-height:1.55; }
+.side nav button:hover,.side nav button.active { background:#332516; border-color:#6e4d2b; color:#ffe6b5; }
+.stat,.panel { background:linear-gradient(180deg,#281e16,#18120d); border-color:#493522; }
+.row,.sessionCard,.postBlock { background:#1a130e; border-color:#4b3623; }
+.sideBottom a { color:#f0d398; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid #f4dba9; outline-offset:3px; }

@@ -1,17 +1,19 @@
 'use strict';
 
 function createPostsRepository({ pool }) {
-  async function listFeed({ room, q }) {
+  async function listFeed({ room, q, poetryKind }) {
     const params = [''];
     const where = [];
     if (room) { params.push(room); where.push(`p.room_id = $${params.length}`); }
     if (q) { params.push(`%${q}%`); where.push(`p.text ilike $${params.length}`); }
+    if (poetryKind) { params.push(poetryKind); where.push(`r.poetry_kind = $${params.length}`); }
     const { rows } = await pool.query(`
       select p.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.created_at as user_created_at,
         count(distinct l.id) as likes_count,
         count(distinct c.id) as comments_count,
         bool_or(case when l.user_id = $1 then true else false end) as liked_by_me
       from posts p
+      join rooms r on r.id = p.room_id and r.poetry_kind in ('reply','dialogue','zamil')
       join users u on u.id = p.user_id
       left join likes l on l.post_id = p.id
       left join comments c on c.post_id = p.id
@@ -31,7 +33,7 @@ function createPostsRepository({ pool }) {
   }
 
   async function findPost(id) {
-    const { rows } = await pool.query('select * from posts where id = $1', [id]);
+    const { rows } = await pool.query("select p.* from posts p join rooms r on r.id=p.room_id where p.id=$1 and r.poetry_kind in ('reply','dialogue','zamil')", [id]);
     return rows[0] || null;
   }
 
@@ -44,7 +46,7 @@ function createPostsRepository({ pool }) {
   }
 
   async function postExists(id) {
-    const post = await pool.query('select 1 from posts where id = $1', [id]);
+    const post = await pool.query("select 1 from posts p join rooms r on r.id=p.room_id where p.id=$1 and r.poetry_kind in ('reply','dialogue','zamil')", [id]);
     return post.rowCount > 0;
   }
 
@@ -66,7 +68,10 @@ function createPostsRepository({ pool }) {
       select c.*, u.username, u.display_name, u.bio, u.avatar_url, u.role, u.created_at as user_created_at
       from comments c
       join users u on u.id = c.user_id
-      where c.post_id = $1
+      where c.post_id = $1 and exists (
+        select 1 from posts p join rooms r on r.id = p.room_id
+        where p.id = c.post_id and r.poetry_kind in ('reply','dialogue','zamil')
+      )
       order by c.created_at asc
     `, [postId]);
     return rows;
@@ -77,7 +82,7 @@ function createPostsRepository({ pool }) {
   }
 
   async function findCommentForModeration(commentId) {
-    const { rows } = await pool.query('select c.*, p.room_id, r.owner_user_id from comments c join posts p on p.id = c.post_id join rooms r on r.id = p.room_id where c.id = $1', [commentId]);
+    const { rows } = await pool.query("select c.*, p.room_id, r.owner_user_id from comments c join posts p on p.id = c.post_id join rooms r on r.id = p.room_id where c.id = $1 and r.poetry_kind in ('reply','dialogue','zamil')", [commentId]);
     return rows[0] || null;
   }
 

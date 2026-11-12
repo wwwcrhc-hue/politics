@@ -19,22 +19,22 @@ let liveTopicPlayback = { playing:true, muted:false };
 let profileUserId = '';
 let currentMessageUserId = '';
 let socialSummary = null;
-let newsLoaded = false;
-let channelMeta = { regions:[], countries:[], languages:[] };
-let channelState = { page:1, limit:12, liveOnly:false, loading:false, total:0 };
-let mediaPlayerState = { mode:'closed', channel:null, videoId:'', embedUrl:'', youtubeUrl:'', playerType:'', muted:false };
-let channelPlayerFallbackTimer = null;
-let liveTopicChannelsLoaded = false;
-let pendingRoomSource = null;
+let selectedPoetryKind = 'all';
+const poetryKinds = {
+  all: { title:'جميع مجالس الشعر', description:'رديّات ومحاورات وزوامل بالصوت والصورة، ومجالس مباشرة يلتقي فيها الشعراء.', context:'جديد الديوان' },
+  reply: { title:'مجالس الرديّات', description:'قصيدة ترد على قصيدة، وأبيات تتجاوب بالقافية والمعنى.', context:'فن الرد الشعري' },
+  dialogue: { title:'ساحات المحاورات', description:'تحديات شعرية بين الشعراء، ومجالس حية بالصوت والصورة.', context:'شعر المواجهة المباشرة' },
+  zamil: { title:'ديوان الزوامل', description:'زوامل مكتوبة ومؤداة بالصوت والفيديو، للمتابعة والمشاركة.', context:'صوت الزامل وأصالته' }
+};
 const livePeers = new Map();
 const liveViewerPeers = new Map();
 const languages = ['ar','en','fr','es','de','tr','fa','ur','hi','bn','id','ms','zh','ja','ko','ru','it','pt','nl','pl','sv','uk','he','sw','am','ha','yo','ig','th','vi','fil','el','ro','cs','hu','da','fi','no','bg','sr','hr','sk','sl','lt','lv','et'];
 const uiText = {
-  ar:{home:'الرئيسية',login:'دخول',messages:'الرسائل',notifications:'التنبيهات',profile:'حسابي',logout:'خروج',allRooms:'كل الساحات',news:'الأخبار العامة العالمية',hot:'أقوى الحوارات الآن',search:'بحث'},
-  en:{home:'Home',login:'Login',messages:'Messages',notifications:'Notifications',profile:'My profile',logout:'Logout',allRooms:'All rooms',news:'Global political news',hot:'Hottest live debates',search:'Search'},
-  fr:{home:'Accueil',login:'Connexion',messages:'Messages',notifications:'Notifications',profile:'Profil',logout:'Sortir',allRooms:'Toutes les salles',news:'Actualité politique mondiale',hot:'Débats en direct',search:'Rechercher'},
-  es:{home:'Inicio',login:'Entrar',messages:'Mensajes',notifications:'Notificaciones',profile:'Perfil',logout:'Salir',allRooms:'Todas las salas',news:'Noticias políticas globales',hot:'Debates en vivo',search:'Buscar'},
-  de:{home:'Start',login:'Anmelden',messages:'Nachrichten',notifications:'Hinweise',profile:'Profil',logout:'Abmelden',allRooms:'Alle Räume',news:'Globale Politiknachrichten',hot:'Top-Live-Debatten',search:'Suchen'}
+  ar:{home:'الرئيسية',login:'دخول',messages:'الرسائل',notifications:'التنبيهات',profile:'حسابي',logout:'خروج',allRooms:'جميع مجالس الشعر',hot:'المحاورات المباشرة الآن',search:'بحث'},
+  en:{home:'Home',login:'Login',messages:'Messages',notifications:'Notifications',profile:'My profile',logout:'Logout',allRooms:'Poetry gatherings',hot:'Live poetry conversations',search:'Search'},
+  fr:{home:'Accueil',login:'Connexion',messages:'Messages',notifications:'Notifications',profile:'Profil',logout:'Sortir',allRooms:'Rencontres poétiques',hot:'Poésie en direct',search:'Rechercher'},
+  es:{home:'Inicio',login:'Entrar',messages:'Mensajes',notifications:'Notificaciones',profile:'Perfil',logout:'Salir',allRooms:'Encuentros de poesía',hot:'Poesía en directo',search:'Buscar'},
+  de:{home:'Start',login:'Anmelden',messages:'Nachrichten',notifications:'Hinweise',profile:'Profil',logout:'Abmelden',allRooms:'Poesietreffen',hot:'Live-Poesie',search:'Suchen'}
 };
 
 const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -60,7 +60,9 @@ async function init(){
     initLanguage();
     rooms=await api('/api/rooms'); renderRooms(); fillRoomSelect();
     if(token){ try{me=await api('/api/me');syncSocketAuth();}catch{logout(false);} }
-    updateAuthUI(); await loadChannelHome(); await loadFeed(); await loadPoliticalNews();
+    updateAuthUI(); setKindControls(); await loadFeed();
+    const linkedRoom=new URLSearchParams(location.search).get('room');
+    if(linkedRoom&&rooms.some(r=>r.id===linkedRoom))await selectRoom(linkedRoom);
   }catch(e){ $('#feed').innerHTML=`<div class="card errorCard">${esc(e.message)}</div>`; }
 }
 function canManageRoom(r){return !!me&&r.ownerUserId===me.id;}
@@ -69,55 +71,80 @@ async function refreshRooms(){rooms=await api('/api/rooms');renderRooms();fillRo
 function liveScore(live){return (live?.viewerCount||0)*3+(live?.likeCount||0)*2+(live?.broadcasters?.length||0);}
 function t(key){const lang=localStorage.getItem('uiLang')||'ar';return (uiText[lang]||uiText.en)[key]||uiText.ar[key]||key;}
 function renderLiveTicker(){const liveRooms=rooms.filter(r=>r.live?.active).sort((a,b)=>liveScore(b.live)-liveScore(a.live));const wrap=$('#liveTicker');if(!wrap)return;wrap.classList.toggle('hidden',!liveRooms.length);wrap.innerHTML=liveRooms.length?`<div class="tickerHead"><b>${esc(t('hot'))}</b><span>${liveRooms.length} بث مباشر</span></div><div class="tickerRail">${liveRooms.map((r,i)=>{const l=r.live||{},host=l.displayName||'مضيف',guests=Math.max(0,(l.broadcasters?.length||1)-1);return `<button class="liveTickerItem ${i===0?'hot':''}" data-room="${esc(r.id)}"><span class="tickerRank">${i===0?'🔥 الأبرز':'● LIVE'}</span><strong>${esc(r.name)}</strong><small class="tickerTopic">${esc(l.topicTitle||'حوار مباشر')}</small><small>المضيف: ${esc(host)} · ${guests} مشارك · ${l.viewerCount||0} مشاهد</small><em>ادخل الغرفة وشاهد الحوار</em></button>`}).join('')}</div>`:'';wrap.querySelectorAll('.liveTickerItem').forEach(b=>b.onclick=async()=>{await selectRoom(b.dataset.room);if(activeLive&&!liveBroadcaster&&!liveWatching)watchLive();});}
-async function loadChannelHome(){await Promise.all([loadChannelMeta(),loadLiveChannels(),loadChannels(true)]);}
-async function loadChannelMeta(){try{channelMeta=await api('/api/channels/meta');$('#channelRegion').innerHTML='<option value="">كل المناطق</option>'+channelMeta.regions.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join('');$('#channelCountry').innerHTML='<option value="">كل الدول</option>'+channelMeta.countries.map(c=>`<option value="${esc(c.id)}">${esc(c.flag||'')} ${esc(c.nameAr||c.nameEn)}</option>`).join('');$('#channelLanguage').innerHTML='<option value="">كل اللغات</option>'+channelMeta.languages.map(l=>`<option value="${esc(l.id)}">${esc(l.nameAr||l.nameEn)}</option>`).join('');}catch(e){$('#channelGrid').innerHTML=`<div class="empty">${esc(e.message)}</div>`;}}
-function channelBadge(c){return `${c.country?.flag||''} ${c.country?.nameAr||c.country?.nameEn||'عالمي'} · ${c.language?.nameAr||c.language?.nameEn||''}`;}
-function channelThumb(c){return c.live?.thumbnail||c.logoUrl||'';}
-function channelCard(c){const thumb=channelThumb(c),live=c.live?.isLive,playable=live||c.youtubeChannelId||c.manualVideoId;return `<article class="channelCard ${live?'isLive':''}" data-channel="${esc(c.id)}">${thumb?`<img loading="lazy" src="${esc(thumb)}" alt="${esc(c.name)}">`:`<div class="channelLogo">${esc((c.name||'ق').slice(0,1))}</div>`}<div class="channelBody"><span class="channelType">${live?'LIVE':playable?'بث رسمي':'قناة إخبارية'}</span><b>${esc(c.name)}</b><small>${esc(channelBadge(c))}</small>${c.live?.title?`<p>${esc(c.live.title)}</p>`:''}<div class="channelActions"><button class="watchChannel primary" data-channel="${esc(c.id)}">${playable?'شاهد الآن':'زيارة القناة'}</button><button class="discussChannel" data-channel="${esc(c.id)}">ناقش البث</button>${me?`<button class="followChannel" data-channel="${esc(c.id)}" data-followed="${c.followed?'1':'0'}">${c.followed?'إلغاء المتابعة':'متابعة'}</button>`:''}</div></div></article>`;}
-async function loadLiveChannels(){const rail=$('#channelLiveRail');if(!rail)return;try{const data=await api('/api/channels/live?limit=12');const list=data.channels||[];rail.innerHTML=list.length?list.map(channelCard).join(''):'<div class="empty">لا توجد قنوات مباشرة مؤكدة في الكاش الآن. أضف YOUTUBE_API_KEY أو manual video ID لتفعيل المباشر.</div>';wireChannelCards(rail);}catch(e){rail.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}}
-async function loadChannels(reset=false){if(channelState.loading)return;channelState.loading=true;try{if(reset){channelState.page=1;$('#channelGrid').innerHTML='';}const params=new URLSearchParams({page:channelState.page,limit:channelState.limit});const q=$('#channelSearch')?.value.trim()||'',region=$('#channelRegion')?.value||'',country=$('#channelCountry')?.value||'',language=$('#channelLanguage')?.value||'';if(q)params.set('search',q);if(region)params.set('region',region);if(country)params.set('country',country);if(language)params.set('language',language);if(channelState.liveOnly)params.set('live','true');const data=await api(`/api/channels?${params}`);channelState.total=data.total||0;const grid=$('#channelGrid');grid.insertAdjacentHTML('beforeend',(data.channels||[]).map(channelCard).join('')||(reset?'<div class="empty">لا توجد قنوات مطابقة.</div>':''));$('#channelTotal').textContent=`${channelState.total} قناة`;channelState.page+=1;$('#loadMoreChannels').classList.toggle('hidden',grid.querySelectorAll('.channelCard').length>=channelState.total);wireChannelCards(grid);}catch(e){$('#channelGrid').innerHTML=`<div class="empty">${esc(e.message)}</div>`;}finally{channelState.loading=false;}}
-function wireChannelCards(root=document){root.querySelectorAll('.watchChannel').forEach(btn=>btn.onclick=()=>openChannelPlayer(btn.dataset.channel));root.querySelectorAll('.discussChannel').forEach(btn=>btn.onclick=()=>discussChannel(btn.dataset.channel));root.querySelectorAll('.followChannel').forEach(btn=>btn.onclick=()=>toggleChannelFollow(btn));}
-async function openChannelPlayer(channelId){try{const data=await api(`/api/channels/${encodeURIComponent(channelId)}/player`),c=data.channel;mediaPlayerState={mode:'expanded',channel:c,videoId:data.videoId||'',embedUrl:data.embedUrl||'',youtubeUrl:data.youtubeUrl||data.fallbackUrl||'',playerType:data.playerType||'',muted:false};$('#theaterChannelName').textContent=c.name;$('#theaterChannelMeta').textContent=channelBadge(c);$('#theaterLiveTitle').textContent=c.live?.title||c.name;$('#theaterFallback').textContent=data.playable?(data.playerType==='official-page'?'يتم تشغيل البث من صفحة القناة الرسمية داخل الموقع.':'يتم تشغيل البث داخل الموقع عبر مشغل YouTube الرسمي.'):'هذا البث غير متاح للمشاهدة داخل الموقع';$('#openYoutubeBtn').href=mediaPlayerState.youtubeUrl||c.websiteUrl||'#';$('#openYoutubeBtn').textContent=data.playable?'فتح المصدر الرسمي':'زيارة القناة الرسمية';renderChannelPlayer();}catch(e){toast(e.message);}}
-function normalizedEmbedUrl(src){if(!src)return '';const url=new URL(src,location.origin);if(url.hostname.includes('youtube.com')||url.hostname.includes('youtube-nocookie.com')){url.searchParams.set('origin',location.origin);url.searchParams.set('enablejsapi','1');url.searchParams.set('playsinline','1');}return url.toString();}
-function youtubeEmbedUrl(){return normalizedEmbedUrl(mediaPlayerState.embedUrl);}
-function renderChannelPlayer(){const theater=$('#channelTheater'),mini=$('#miniChannelPlayer'),frame=$('#youtubeFrame'),miniFrame=$('#miniYoutubeFrame');clearTimeout(channelPlayerFallbackTimer);theater.classList.toggle('hidden',mediaPlayerState.mode!=='expanded');mini.classList.toggle('hidden',mediaPlayerState.mode!=='mini');if(mediaPlayerState.mode==='closed'){frame.innerHTML='';miniFrame.innerHTML='';return;}const holder=mediaPlayerState.mode==='mini'?miniFrame:frame,src=youtubeEmbedUrl();let iframe=document.getElementById('channelYoutubeIframe');if(!src){holder.innerHTML='<div class="empty channelPlayerMessage">هذا البث غير متاح للمشاهدة داخل الموقع</div>';return;}if(!iframe||iframe.dataset.src!==src){iframe=document.createElement('iframe');iframe.id='channelYoutubeIframe';iframe.dataset.src=src;iframe.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';iframe.referrerPolicy='strict-origin-when-cross-origin';iframe.allowFullscreen=true;iframe.src=src;}holder.innerHTML='';holder.appendChild(iframe);if(mediaPlayerState.playerType==='channel-live'&&mediaPlayerState.mode==='expanded')channelPlayerFallbackTimer=setTimeout(()=>{if(mediaPlayerState.mode==='expanded'&&document.getElementById('channelYoutubeIframe')?.dataset.src===src&&!holder.querySelector('.channelPlayerMessage'))holder.insertAdjacentHTML('beforeend','<div class="channelPlayerMessage">إذا بقيت الشاشة فارغة فالقناة لا تبث مباشرًا الآن أو تمنع التضمين داخل المواقع.</div>');},4500);$('#miniChannelName').textContent=mediaPlayerState.channel?.name||'';}
-function setChannelMuted(muted){mediaPlayerState.muted=muted;const iframe=document.getElementById('channelYoutubeIframe');iframe?.contentWindow?.postMessage(JSON.stringify({event:'command',func:muted?'mute':'unMute',args:[]}), '*');$('#muteChannelBtn').textContent=muted?'فتح صوت القناة':'كتم القناة';}
-function closeChannelPlayer(){mediaPlayerState={mode:'closed',channel:null,videoId:'',embedUrl:'',youtubeUrl:'',playerType:'',muted:false};renderChannelPlayer();}
-function discussChannel(channelId){if(!me)return openModal();const card=document.querySelector(`.channelCard[data-channel="${CSS.escape(channelId)}"]`),title=card?.querySelector('b')?.textContent||mediaPlayerState.channel?.name||'';pendingRoomSource={sourceChannelId:channelId,sourceYoutubeVideoId:mediaPlayerState.channel?.id===channelId?mediaPlayerState.videoId:''};toast('اكتب عنوان غرفة النقاش ثم احفظها.');$('#newRoomBtn')?.click();if($('#roomNameInput'))$('#roomNameInput').value=`نقاش ${title}`.slice(0,60);if($('#roomDescInput'))$('#roomDescInput').value=`نقاش مرتبط بقناة ${title}`.slice(0,240);}
-async function toggleChannelFollow(btn){if(!me)return openModal();const followed=btn.dataset.followed==='1',id=btn.dataset.channel;try{await api(`/api/channels/${encodeURIComponent(id)}/follow`,{method:followed?'DELETE':'POST'});btn.dataset.followed=followed?'0':'1';btn.textContent=followed?'متابعة':'إلغاء المتابعة';}catch(e){toast(e.message);}}
-$('#refreshChannelsBtn')?.addEventListener('click',()=>loadChannelHome());
-$('#loadMoreChannels')?.addEventListener('click',()=>loadChannels(false));
-['#channelRegion','#channelCountry','#channelLanguage'].forEach(sel=>$(sel)?.addEventListener('change',()=>loadChannels(true)));
-$('#channelSearch')?.addEventListener('input',()=>{clearTimeout(loadChannels.searchTimer);loadChannels.searchTimer=setTimeout(()=>loadChannels(true),300);});
-$('#channelLiveOnly')?.addEventListener('click',()=>{channelState.liveOnly=!channelState.liveOnly;$('#channelLiveOnly').classList.toggle('primary',channelState.liveOnly);loadChannels(true);});
-$('#minimizeChannelPlayer')?.addEventListener('click',()=>{mediaPlayerState.mode='mini';renderChannelPlayer();});
-$('#expandMiniPlayer')?.addEventListener('click',()=>{mediaPlayerState.mode='expanded';renderChannelPlayer();});
-$('#closeChannelPlayer')?.addEventListener('click',closeChannelPlayer);
-$('#closeMiniPlayer')?.addEventListener('click',closeChannelPlayer);
-$('#muteChannelBtn')?.addEventListener('click',()=>setChannelMuted(!mediaPlayerState.muted));
-$('#discussChannelBtn')?.addEventListener('click',()=>mediaPlayerState.channel&&discussChannel(mediaPlayerState.channel.id));
-function renderRooms(){ $('#rooms').innerHTML=rooms.map(r=>{const liveLabel=r.live?.topicTitle?`حوار مباشر: ${esc(r.live.topicTitle)}`:'بث مباشر الآن';return `<div class="roomItem ${currentRoom===r.id?'active':''} ${r.live?.active?'hasLive':''}" data-id="${esc(r.id)}"><button class="roomBtn" data-id="${esc(r.id)}"><span>${esc(r.name)}${r.live?.active?'<em class="roomLiveBadge">LIVE</em>':''}</span><small>${r.live?.active?liveLabel:`${r.posts||0}/${r.messages||0}`}</small></button>${canManageRoom(r)?`<div class="roomManage"><button class="editRoom">تعديل</button><button class="deleteRoom danger">حذف</button></div>`:''}</div>`}).join(''); document.querySelectorAll('.roomBtn').forEach(b=>b.onclick=()=>selectRoom(b.dataset.id));document.querySelectorAll('.editRoom').forEach(btn=>btn.onclick=()=>openRoomForm(btn.closest('.roomItem').dataset.id));document.querySelectorAll('.deleteRoom').forEach(btn=>btn.onclick=()=>deleteRoom(btn.closest('.roomItem').dataset.id));renderLiveTicker(); }
-function fillRoomSelect(){ $('#postRoom').innerHTML=rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join(''); }
-function openRoomForm(id=''){if(!me)return openModal();roomEditId=id;const room=rooms.find(r=>r.id===id);$('#roomNameInput').value=room?.name||'';$('#roomDescInput').value=room?.description||'';$('#roomForm').classList.remove('hidden');$('#roomNameInput').focus();}
-async function saveRoom(){const name=$('#roomNameInput').value.trim(),description=$('#roomDescInput').value.trim();if(name.length<3)return toast('اسم الغرفة قصير');try{const url=roomEditId?`/api/rooms/${roomEditId}`:'/api/rooms',body={name,description};if(!roomEditId&&pendingRoomSource)Object.assign(body,pendingRoomSource);await api(url,{method:roomEditId?'PATCH':'POST',body:JSON.stringify(body)});$('#roomForm').classList.add('hidden');roomEditId='';pendingRoomSource=null;await refreshRooms();toast('تم حفظ الغرفة');}catch(e){toast(e.message);}}
+function renderRooms(){
+  const visible=rooms.filter(r=>selectedPoetryKind==='all'||r.poetryKind===selectedPoetryKind);
+  $('#rooms').innerHTML=visible.map(r=>{
+    const liveLabel=r.live?.topicTitle?`محاورة مباشرة: ${esc(r.live.topicTitle)}`:'بث مباشر الآن';
+    const kindLabel={reply:'رديّة',dialogue:'محاورة',zamil:'زامل'}[r.poetryKind]||'شعر';
+    return `<div class="roomItem ${currentRoom===r.id?'active':''} ${r.live?.active?'hasLive':''}" data-id="${esc(r.id)}"><button class="roomBtn" data-id="${esc(r.id)}"><span>${esc(r.name)}${r.live?.active?'<em class="roomLiveBadge">LIVE</em>':''}</span><small class="poetryRoomType">${kindLabel}</small><small>${r.live?.active?liveLabel:`${r.posts||0} قصيدة · ${r.messages||0} رسالة`}</small></button>${canManageRoom(r)?`<div class="roomManage"><button class="editRoom">تعديل</button><button class="deleteRoom danger">حذف</button></div>`:''}</div>`;
+  }).join('')||'<div class="empty">لا توجد مجالس في هذا القسم بعد.</div>';
+  document.querySelectorAll('.roomBtn').forEach(b=>b.onclick=()=>selectRoom(b.dataset.id));
+  document.querySelectorAll('.editRoom').forEach(btn=>btn.onclick=()=>openRoomForm(btn.closest('.roomItem').dataset.id));
+  document.querySelectorAll('.deleteRoom').forEach(btn=>btn.onclick=()=>deleteRoom(btn.closest('.roomItem').dataset.id));
+  renderLiveTicker();
+}
+function setKindControls(){
+  document.querySelectorAll('[data-kind]').forEach(btn=>{
+    const active=btn.dataset.kind===selectedPoetryKind;
+    btn.classList.toggle('active',active);
+    if(btn.closest('#poetryKindTabs'))btn.setAttribute('aria-pressed',String(active));
+  });
+  if(!currentRoom){
+    const kind=poetryKinds[selectedPoetryKind];
+    $('#roomTitle').textContent=kind.title;
+    $('#roomDesc').textContent=kind.description;
+    $('#roomContext').textContent=kind.context;
+  }
+}
+async function setPoetryKind(kind){
+  if(!poetryKinds[kind])return;
+  if(liveHost)return toast('أنت تبث الآن؛ أنهِ البث قبل الانتقال إلى قسم آخر.');
+  if(currentRoom)await returnToHome();
+  selectedPoetryKind=kind;
+  setKindControls();renderRooms();fillRoomSelect();await loadFeed();
+}
+document.querySelectorAll('[data-kind]').forEach(btn=>btn.onclick=()=>setPoetryKind(btn.dataset.kind));
+$('#joinPoetryBtn').onclick=()=>selectRoom(rooms.find(r=>r.id==='poetry-replies')?.id||rooms[0]?.id);
+$('#exploreLiveBtn').onclick=async()=>{
+  const first=rooms.filter(r=>r.live?.active).sort((a,b)=>liveScore(b.live)-liveScore(a.live))[0];
+  if(first){await selectRoom(first.id);if(activeLive&&!liveBroadcaster&&!liveWatching)watchLive();}
+  else{await setPoetryKind('dialogue');toast('لا يوجد بث مباشر حاليًا؛ تصفح مجالس المحاورات.');}
+};
+function fillRoomSelect(){
+  const previous=$('#postRoom').value;
+  $('#postRoom').innerHTML=rooms.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+  const desired=currentRoom||(selectedPoetryKind==='all'?previous:rooms.find(r=>r.poetryKind===selectedPoetryKind)?.id);
+  if(rooms.some(r=>r.id===desired))$('#postRoom').value=desired;
+}
+function openRoomForm(id=''){
+  if(!me)return openModal();
+  roomEditId=id;const room=rooms.find(r=>r.id===id);
+  $('#roomNameInput').value=room?.name||'';
+  $('#roomDescInput').value=room?.description||'';
+  $('#roomKindInput').value=room?.poetryKind||(selectedPoetryKind==='all'?'reply':selectedPoetryKind);
+  $('#roomKindInput').disabled=!!room;
+  $('#roomForm').classList.remove('hidden');$('#roomNameInput').focus();
+}
+async function saveRoom(){const name=$('#roomNameInput').value.trim(),description=$('#roomDescInput').value.trim(),poetryKind=$('#roomKindInput').value;if(name.length<3)return toast('اسم المجلس قصير');try{const url=roomEditId?`/api/rooms/${roomEditId}`:'/api/rooms',body={name,description,poetryKind};await api(url,{method:roomEditId?'PATCH':'POST',body:JSON.stringify(body)});$('#roomForm').classList.add('hidden');roomEditId='';await refreshRooms();toast('تم حفظ المجلس الشعري');}catch(e){toast(e.message);}}
 async function deleteRoom(id){const room=rooms.find(r=>r.id===id);if(!room)return;if(!confirm(`حذف غرفة "${room.name}" وكل منشوراتها ورسائلها؟`))return;try{await api(`/api/rooms/${id}`,{method:'DELETE'});if(currentRoom===id){currentRoom='';$('#chatBox').innerHTML='';$('#chatSend').classList.add('hidden');}await refreshRooms();await loadFeed();toast('تم حذف الغرفة');}catch(e){toast(e.message);}}
 async function selectRoom(id){
+  const room=rooms.find(r=>r.id===id);
+  if(!room)return toast('المجلس الشعري غير موجود');
   if(liveHost&&currentRoom&&currentRoom!==id)return toast('أنت تبث الآن. أنهِ البث قبل الانتقال إلى ساحة أخرى.');
   if(currentRoom && currentRoom!==id){ await leaveVoice(); await stopWatchingLive(); if(liveBroadcaster) await leaveLiveGuest(); }
-  currentRoom=id; const room=rooms.find(r=>r.id===id); if(!room)return;
+  currentRoom=id;
+  selectedPoetryKind=room.poetryKind||'all';setKindControls();
+  $('#poetryIntro')?.classList.add('hidden');
   currentRoomPower={role:'guest',canModerate:false,canManage:false,banned:false,roomStatus:room.status||'active'};
   if(me){try{currentRoomPower=await api(`/api/rooms/${id}/permissions`);}catch{}}
-  $('#roomTitle').textContent=room.name; $('#roomDesc').textContent=room.description; $('#postRoom').value=id; $('#roomContext').textContent=currentRoomPower.role==='owner'?'غرفتك':currentRoomPower.role==='moderator'?'أنت مشرف في هذه الغرفة':'ساحة عامة'; renderRooms(); socket.emit('room:join',id);
+  $('#roomTitle').textContent=room.name; $('#roomDesc').textContent=room.description; $('#postRoom').value=id; $('#roomContext').textContent=currentRoomPower.role==='owner'?'مجلسك':currentRoomPower.role==='moderator'?'أنت مشرف في هذا المجلس':poetryKinds[room.poetryKind]?.context||'مجلس شعري'; renderRooms(); socket.emit('room:join',id);
   $('#manageRoomBtn').classList.toggle('hidden',!canModerateCurrentRoom());
   $('#chatNotice').textContent=`دردشة ${room.name}`; $('#chatSend').classList.toggle('hidden',!canAct()||currentRoomPower.banned); resetRealtimeUi();
-  $('#globalChannels')?.classList.add('hidden');
   await Promise.all([loadFeed(),loadChat()]);
-  $('#newsStrip').classList.add('hidden');
 }
-async function loadFeed(){ const p=new URLSearchParams(); if(currentRoom)p.set('room',currentRoom); if(currentSearch)p.set('q',currentSearch); const list=await api(`/api/feed${p.toString()?`?${p}`:''}`); currentFeed=list; $('#feed').innerHTML=list.length?list.map(postHtml).join(''):'<div class="empty">لا توجد منشورات مطابقة.</div>'; wirePosts(); }
+async function loadFeed(){ const p=new URLSearchParams(); if(currentRoom)p.set('room',currentRoom);else if(selectedPoetryKind!=='all')p.set('poetryKind',selectedPoetryKind);if(currentSearch)p.set('q',currentSearch); const list=await api(`/api/feed${p.toString()?`?${p}`:''}`); currentFeed=list; $('#feed').innerHTML=list.length?list.map(postHtml).join(''):'<div class="empty">لا توجد قصائد أو زوامل في هذا القسم بعد. كن أول من ينشر.</div>'; wirePosts(); }
 function initLanguage(){const select=$('#languageSelect');if(!select)return;const names=typeof Intl!=='undefined'&&Intl.DisplayNames?new Intl.DisplayNames([navigator.language||'en'],{type:'language'}):null;select.innerHTML=languages.map(code=>`<option value="${code}">${esc(names?.of(code)||code.toUpperCase())}</option>`).join('');select.value=localStorage.getItem('uiLang')||'ar';select.onchange=()=>{localStorage.setItem('uiLang',select.value);applyLanguage();};applyLanguage();}
-function applyLanguage(){const lang=localStorage.getItem('uiLang')||'ar';document.documentElement.lang=lang;document.documentElement.dir=['ar','fa','ur','he'].includes(lang)?'rtl':'ltr';$('#homeBtn').textContent=t('home');$('#loginBtn').textContent=t('login');$('#messagesBtn').textContent=t('messages');$('#notificationsBtn').childNodes[0].nodeValue=t('notifications')+' ';$('#profileBtn').textContent=t('profile');$('#logoutBtn').textContent=t('logout');$('#searchBtn').textContent=t('search');if(!currentRoom)$('#roomTitle').textContent=t('allRooms');renderLiveTicker();}
-async function loadPoliticalNews(force=false){const wrap=$('#newsStrip');if(!wrap||currentRoom)return;if(newsLoaded&&!force){wrap.classList.remove('hidden');return;}wrap.classList.remove('hidden');wrap.innerHTML=`<b>${esc(t('news'))}</b><span class="muted">جاري تحميل الأخبار...</span>`;try{const data=await api('/api/political-news');newsLoaded=true;const items=data.items||[],sources=[...new Set(items.map(x=>x.source))],langs=[...new Set(items.map(x=>x.lang).filter(Boolean))];wrap.innerHTML=`<div class="newsHead"><b>${esc(t('news'))}</b><div class="newsFilters"><select id="newsSourceFilter"><option value="">كل المصادر</option>${sources.map(x=>`<option>${esc(x)}</option>`).join('')}</select><select id="newsLangFilter"><option value="">كل اللغات</option>${langs.map(x=>`<option value="${esc(x)}">${esc(x.toUpperCase())}</option>`).join('')}</select><button class="newsRefresh" id="refreshNewsBtn">تحديث</button></div></div><div class="newsItems" id="newsItems"></div>`;const paint=()=>{const source=$('#newsSourceFilter').value,lang=$('#newsLangFilter').value,filtered=items.filter(n=>(!source||n.source===source)&&(!lang||n.lang===lang));$('#newsItems').innerHTML=filtered.map(n=>`<a class="newsItem" href="${esc(n.link)}" target="_blank" rel="noopener"><span>${esc(n.source)} · ${esc((n.lang||'').toUpperCase())}</span><strong>${esc(n.title)}</strong><small>${esc(n.summary||'')}</small></a>`).join('')||'<div class="empty">لا توجد أخبار ضمن هذا الفلتر.</div>';};paint();$('#newsSourceFilter').onchange=paint;$('#newsLangFilter').onchange=paint;$('#refreshNewsBtn').onclick=()=>{newsLoaded=false;loadPoliticalNews(true);};}catch(e){wrap.innerHTML=`<b>${esc(t('news'))}</b><button class="newsRefresh" id="refreshNewsBtn">إعادة المحاولة</button><span class="muted">${esc(e.message)}</span>`;$('#refreshNewsBtn').onclick=()=>loadPoliticalNews(true);}}
+function applyLanguage(){const lang=localStorage.getItem('uiLang')||'ar';document.documentElement.lang=lang;document.documentElement.dir=['ar','fa','ur','he'].includes(lang)?'rtl':'ltr';$('#homeBtn').textContent=t('home');$('#loginBtn').textContent=t('login');$('#messagesBtn').textContent=t('messages');$('#notificationsBtn').childNodes[0].nodeValue=t('notifications')+' ';$('#profileBtn').textContent=t('profile');$('#logoutBtn').textContent=t('logout');$('#searchBtn').textContent=t('search');if(!currentRoom)setKindControls();renderLiveTicker();}
 function mediaHtml(media=[]){ return media.map(m=>m.type==='image'?`<a href="${esc(m.url)}" target="_blank"><img class="postImage" src="${esc(m.url)}" alt="صورة مرفقة"></a>`:`<video class="postVideo" src="${esc(m.url)}" controls preload="metadata"></video>`).join(''); }
 function postHtml(post){ const room=rooms.find(r=>r.id===post.roomId), roomModeration=currentRoom===post.roomId&&canModerateCurrentRoom(), canDelete=me&&(post.userId===me.id||roomModeration), canEdit=me&&post.userId===me.id; const quick=canAct()?`<div class="quickComment"><input maxlength="1500" placeholder="اكتب تعليقًا..." aria-label="تعليق"><button class="quickCommentSend primary">إرسال</button></div>`:''; return `<article class="post" data-id="${post.id}"><div class="postHead"><button class="authorBtn" data-user="${esc(post.userId)}">${avatarHtml(post.author,'authorAvatar')}<span><b class="author">${esc(post.author?.displayName||post.author?.username||'مستخدم')}</b><small class="handle">@${esc(post.author?.username||'')}</small></span></button><span class="time">${fmt(post.createdAt)}${post.editedAt?' · عُدّل':''}</span></div><div class="roomTag">${esc(room?.name||'')}</div>${post.text?`<div class="postText">${esc(post.text)}</div>`:''}<div class="postMedia">${mediaHtml(post.media)}</div><div class="actions"><button class="likeBtn ${post.likedByMe?'liked':''}">♥ ${post.likes}</button><button class="commentBtn">💬 ${post.comments}</button><button class="shareBtn">مشاركة</button><button class="reportBtn">إبلاغ</button>${canEdit?'<button class="editBtn">تعديل النص</button>':''}${canDelete?'<button class="deleteBtn danger">حذف</button>':''}</div>${quick}<div class="comments hidden"></div></article>`; }
 function buttonCount(btn){return Number((btn.textContent.match(/\d+/)||['0'])[0]);}
@@ -166,13 +193,9 @@ function renderLiveTitle(){const title=activeLive?.topicTitle||'';$('#liveTopicT
 function updateLiveTitle(){if(!liveHost||!currentRoom)return;const title=$('#liveTopicTitleInput').value.trim();if(activeLive)activeLive.topicTitle=title;renderLiveTitle();socket.emit('live:title',{token,roomId:currentRoom,title});}
 function updateTopicControlButtons(){const has=!!activeLive?.topicMedia&&liveHost;const play=$('#liveTopicPlayBtn'),mute=$('#liveTopicMuteBtn');play.classList.toggle('hidden',!has);mute.classList.toggle('hidden',!has);play.textContent=liveTopicPlayback.playing===false?'تشغيل الفيديو':'إيقاف الفيديو';play.title=liveTopicPlayback.playing===false?'تشغيل فيديو موضوع الحوار':'إيقاف فيديو موضوع الحوار';mute.textContent=liveTopicPlayback.muted===true?'🔇':'🔊';mute.title=liveTopicPlayback.muted===true?'فتح صوت الملف':'كتم صوت الملف';mute.setAttribute('aria-label',mute.title);mute.classList.add('liveSoundBtn');mute.classList.toggle('muted',liveTopicPlayback.muted===true);}
 function sendTopicControl(next={}){if(!liveHost||!currentRoom)return;liveTopicPlayback={...liveTopicPlayback,...next};applyTopicPlayback();updateTopicControlButtons();socket.emit('live:topic-control',{token,roomId:currentRoom,...liveTopicPlayback});}
-function updateLiveTopicFileLabel(){const file=$('#liveTopicMedia')?.files?.[0];$('#liveTopicPickText').textContent=file?`تم اختيار: ${file.name.slice(0,32)}`:'تحميل مقطع الحوار';}
+function updateLiveTopicFileLabel(){const file=$('#liveTopicMedia')?.files?.[0];$('#liveTopicPickText').textContent=file?`تم اختيار: ${file.name.slice(0,32)}`:'إرفاق قصيدة أو مقطع';}
 async function uploadLiveTopic(){if(!liveHost||!currentRoom)return;const input=$('#liveTopicMedia');const file=input.files?.[0];if(!file)return toast('اختر مقطع الحوار أولًا');const title=$('#liveTopicTitleInput').value.trim();if(activeLive)activeLive.topicTitle=title;const form=new FormData();form.append('media',file);form.append('title',title);try{$('#liveTopicPick').classList.add('isUploading');$('#liveTopicUploadBtn').disabled=true;if(title)socket.emit('live:title',{token,roomId:currentRoom,title});await api(`/api/live/${currentRoom}/topic-media`,{method:'POST',body:form});liveTopicPlayback={playing:true,muted:false};toast('تم إرسال مقطع الحوار');}catch(e){toast(e.message);}finally{$('#liveTopicPick').classList.remove('isUploading');$('#liveTopicUploadBtn').disabled=false;input.value='';updateLiveTopicFileLabel();}}
 async function clearLiveTopic(){if(!liveHost||!currentRoom)return;try{await api(`/api/live/${currentRoom}/topic-media`,{method:'DELETE'});toast('تمت إزالة موضوع الحوار');}catch(e){toast(e.message);}}
-function applyTopicPlayback(){const panel=$('#liveTopicPanel'),media=panel?.querySelector('video'),iframe=panel?.querySelector('iframe');if(iframe){const cmd=liveTopicPlayback.playing===false?'pauseVideo':'playVideo';iframe.contentWindow?.postMessage(JSON.stringify({event:'command',func:cmd,args:[]}), '*');iframe.contentWindow?.postMessage(JSON.stringify({event:'command',func:liveTopicPlayback.muted===true?'mute':'unMute',args:[]}), '*');return;}if(!media)return;media.loop=true;media.muted=liveTopicPlayback.muted===true;media.volume=1;if(liveTopicPlayback.playing!==false)media.play().catch(()=>{media.muted=true;media.play().catch(()=>{});});else media.pause();}
-function renderLiveTopic(media){const panel=$('#liveTopicPanel');if(!panel)return;if(!media?.url){panel.innerHTML='';panel.dataset.url='';panel.classList.add('hidden');updateLiveStageLayout();return;}const src=media.type==='channel'?normalizedEmbedUrl(media.url):media.url,same=panel.dataset.url===src;panel.classList.remove('hidden');if(!same){const safeName=esc(media.name||activeLive?.topicTitle||'موضوع الحوار');panel.dataset.url=src;if(media.type==='channel')panel.innerHTML=`<iframe src="${esc(src)}" title="${safeName}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;else panel.innerHTML=media.type==='image'?`<img src="${esc(src)}" alt="${safeName}">`:`<video src="${esc(src)}" autoplay loop playsinline preload="auto" title="${safeName}"></video>`;const video=panel.querySelector('video');if(video)video.onpause=()=>{if(liveTopicPlayback.playing!==false)setTimeout(()=>video.play().catch(()=>{}),80);};}syncLiveTopicCaption();applyTopicPlayback();updateLiveStageLayout();}
-async function loadLiveTopicChannels(){const select=$('#liveTopicChannelSelect');if(!select||liveTopicChannelsLoaded)return;try{const data=await api('/api/channels/live?limit=30');const channels=data.channels||[];select.innerHTML='<option value="">قناة الحوار</option>'+channels.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');liveTopicChannelsLoaded=true;}catch(e){select.innerHTML='<option value="">تعذر تحميل القنوات</option>';}}
-async function sendLiveTopicChannel(){if(!liveHost||!currentRoom)return;const select=$('#liveTopicChannelSelect'),channelId=select?.value||'';if(!channelId)return toast('اختر قناة الحوار أولًا');const title=$('#liveTopicTitleInput').value.trim();if(activeLive)activeLive.topicTitle=title;try{$('#liveTopicChannelBtn').disabled=true;if(title)socket.emit('live:title',{token,roomId:currentRoom,title});await api(`/api/live/${currentRoom}/topic-channel`,{method:'POST',body:JSON.stringify({channelId,title}),headers:{'Content-Type':'application/json'}});liveTopicPlayback={playing:true,muted:false};toast('تم إرسال قناة الحوار');}catch(e){toast(e.message);}finally{$('#liveTopicChannelBtn').disabled=false;}}
 function clearRemoteLive(){document.querySelectorAll('.liveTileBox[id^="live-remote-tile-"]').forEach(v=>v.remove());for(const pc of liveViewerPeers.values())pc.close();liveViewerPeers.clear();updateLiveStageLayout();}
 async function stopLive(){if(!liveHost)return;if(currentRoom)socket.emit('live:stop',{roomId:currentRoom});for(const pc of livePeers.values())pc.close();livePeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveMessages=[];liveLiked=false;liveWatching=false;liveMuted=false;liveHost=false;liveBroadcaster=false;activeLive=null;clearRemoteLive();renderLiveTitle();renderLiveTopic(null);$('#liveVideo').srcObject=null;$('#liveLocalTile')?.classList.add('hidden');updateLiveActionButtons();renderLiveParticipants();if(currentRoom)loadChat();}
 async function leaveLiveGuest(notify=true){if(!liveBroadcaster||liveHost)return;if(notify&&currentRoom)socket.emit('live:guest-leave',{token,roomId:currentRoom});for(const pc of livePeers.values())pc.close();livePeers.clear();if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}liveMuted=false;liveBroadcaster=false;clearRemoteLive();renderLiveTopic(activeLive?.topicMedia||null);$('#liveVideo').srcObject=null;$('#liveLocalTile')?.classList.add('hidden');$('#liveStatus').textContent=activeLive?'مشاهدة البث المباشر':'لا يوجد بث مباشر الآن';updateLiveActionButtons();}
@@ -205,12 +228,10 @@ function updateLiveActionButtons(){
   $('#liveTopicTitleInput').classList.toggle('hidden',!(liveHost||canStartLive));
   $('#liveTopicPick').classList.toggle('hidden',!liveHost);
   $('#liveTopicUploadBtn').classList.toggle('hidden',!liveHost);
-  $('#liveTopicChannelSelect')?.classList.toggle('hidden',!liveHost);
-  $('#liveTopicChannelBtn')?.classList.toggle('hidden',!liveHost);
   $('#clearLiveTopicBtn').classList.toggle('hidden',!liveHost||!activeLive?.topicMedia);
   $('#requestGuestBtn').classList.toggle('hidden',!activeLive||liveBroadcaster||liveHost||!liveWatching||!canAct());
   updateTopicControlButtons();
-  if(liveHost){loadLiveGuestOptions();loadLiveTopicChannels();}
+  if(liveHost)loadLiveGuestOptions();
   if(!activeLive&&!liveBroadcaster){
     if(!currentRoom)$('#liveStatus').textContent='اختر ساحة أولًا لبدء بث مباشر';
     else if(!me)$('#liveStatus').textContent='سجل الدخول لبدء بث مباشر';
@@ -257,7 +278,7 @@ function renderLiveParticipants(){
 }
 function inviteLiveGuest(){if(!liveHost)return;const select=$('#liveGuestSelect'),option=select.selectedOptions?.[0],targetUserId=option?.dataset.user||select.value,targetSocketId=option?.dataset.socket||'';if(!targetUserId)return toast('اختر مستخدمًا من القائمة');socket.emit('live:invite',{token,roomId:currentRoom,targetUserId,targetSocketId});}
 function replaceLiveGuest(targetSocketId){if(!liveHost)return;const select=document.querySelector(`.liveReplaceSelect[data-target="${CSS.escape(targetSocketId)}"]`);const option=select?.selectedOptions?.[0],nextSocketId=select?.value||'',targetUserId=option?.dataset.user||'';if(!targetUserId&&!nextSocketId)return toast('اختر مشاهدًا من قائمة الاستبدال');socket.emit('live:guest-remove',{token,roomId:currentRoom,targetSocketId});socket.emit('live:invite',{token,roomId:currentRoom,targetUserId,targetSocketId:nextSocketId});}
-$('#startLiveBtn').onclick=startLive; $('#watchLiveBtn').onclick=watchLive; $('#stopLiveBtn').onclick=stopLive; $('#inviteGuestBtn').onclick=inviteLiveGuest; $('#leaveGuestBtn').onclick=leaveLiveGuest; $('#liveMuteBtn').onclick=toggleLiveMute; $('#liveLikeBtn').onclick=toggleLiveLike; $('#liveShareBtn').onclick=shareLive; $('#requestGuestBtn').onclick=()=>socket.emit('live:guest-request',{token,roomId:currentRoom}); $('#liveTopicMedia').onchange=updateLiveTopicFileLabel; $('#liveTopicUploadBtn').onclick=uploadLiveTopic; $('#liveTopicChannelBtn').onclick=sendLiveTopicChannel; $('#clearLiveTopicBtn').onclick=clearLiveTopic; $('#liveTopicPlayBtn').onclick=()=>sendTopicControl({playing:liveTopicPlayback.playing===false}); $('#liveTopicMuteBtn').onclick=()=>sendTopicControl({muted:liveTopicPlayback.muted===false}); $('#liveTopicTitleInput').onchange=updateLiveTitle; $('#liveTopicTitleInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#liveTopicTitleInput').blur();}};
+$('#startLiveBtn').onclick=startLive; $('#watchLiveBtn').onclick=watchLive; $('#stopLiveBtn').onclick=stopLive; $('#inviteGuestBtn').onclick=inviteLiveGuest; $('#leaveGuestBtn').onclick=leaveLiveGuest; $('#liveMuteBtn').onclick=toggleLiveMute; $('#liveLikeBtn').onclick=toggleLiveLike; $('#liveShareBtn').onclick=shareLive; $('#requestGuestBtn').onclick=()=>socket.emit('live:guest-request',{token,roomId:currentRoom}); $('#liveTopicMedia').onchange=updateLiveTopicFileLabel; $('#liveTopicUploadBtn').onclick=uploadLiveTopic; $('#clearLiveTopicBtn').onclick=clearLiveTopic; $('#liveTopicPlayBtn').onclick=()=>sendTopicControl({playing:liveTopicPlayback.playing===false}); $('#liveTopicMuteBtn').onclick=()=>sendTopicControl({muted:liveTopicPlayback.muted===false}); $('#liveTopicTitleInput').onchange=updateLiveTitle; $('#liveTopicTitleInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#liveTopicTitleInput').blur();}};
 socket.on('live:invite-candidates',d=>{if(d.roomId!==currentRoom)return;liveInviteCandidates=d.users||[];renderLiveGuestOptions();});
 socket.on('live:viewers',d=>{if(d.roomId!==currentRoom)return;liveViewers=d.viewers||[];renderLiveParticipants();});
 socket.on('live:likes',d=>{if(d.roomId!==currentRoom)return;if(activeLive)activeLive.likeCount=d.likeCount||0;updateLiveActionButtons();});
@@ -311,9 +332,21 @@ $('#adminPageBtn').addEventListener('click',()=>{location.href='/admin';});
 $('#manageRoomBtn').onclick=openRoomManager;$('#closeRoomManage').onclick=()=>$('#roomManageModal').classList.add('hidden');$('#addMemberBtn').onclick=async()=>{const username=$('#memberUsername').value.trim();if(!username)return;try{await api(`/api/rooms/${currentRoom}/members`,{method:'POST',body:JSON.stringify({username,role:$('#memberRole').value})});$('#memberUsername').value='';await loadRoomMembers();toast('تمت إضافة العضو');}catch(e){toast(e.message);}};$('#openRoomBtn').onclick=()=>setRoomStatus('active');$('#closeRoomBtn').onclick=()=>setRoomStatus('closed');
 $('#newRoomBtn').onclick=()=>openRoomForm();
 $('#saveRoomBtn').onclick=saveRoom;
-$('#cancelRoomBtn').onclick=()=>{$('#roomForm').classList.add('hidden');roomEditId='';pendingRoomSource=null;};
+$('#cancelRoomBtn').onclick=()=>{$('#roomForm').classList.add('hidden');roomEditId='';};
 function logout(refresh=true){leaveVoice();if(liveHost)stopLive();else if(liveBroadcaster)leaveLiveGuest();token='';me=null;localStorage.removeItem('token');updateAuthUI();if(refresh)loadFeed();} $('#logoutBtn').onclick=()=>logout();
-$('#homeBtn').onclick=async()=>{if(liveHost)return toast('أنت تبث الآن. أنهِ البث قبل العودة للرئيسية حتى لا ينقطع الحوار.');await leaveVoice();await stopWatchingLive();currentRoom='';currentRoomPower={role:'guest',canModerate:false,canManage:false,banned:false,roomStatus:'active'};$('#manageRoomBtn').classList.add('hidden');resetRealtimeUi();$('#roomTitle').textContent=t('allRooms');$('#roomDesc').textContent='منشورات عامة، صوت مباشر، صور وفيديو، وبث حي.';renderRooms();$('#globalChannels')?.classList.remove('hidden');$('#chatNotice').textContent='اختر ساحة لفتح الدردشة.';$('#chatBox').innerHTML='';$('#chatSend').classList.add('hidden');await loadChannelHome();await loadFeed();await loadPoliticalNews();};
+async function returnToHome(){
+  if(liveHost)return toast('أنت تبث الآن؛ أنهِ البث قبل العودة حتى لا ينقطع.');
+  await leaveVoice();await stopWatchingLive();
+  if(liveBroadcaster)await leaveLiveGuest();
+  currentRoom='';selectedPoetryKind='all';
+  currentRoomPower={role:'guest',canModerate:false,canManage:false,banned:false,roomStatus:'active'};
+  $('#manageRoomBtn').classList.add('hidden');resetRealtimeUi();
+  $('#poetryIntro')?.classList.remove('hidden');
+  $('#chatNotice').textContent='اختر مجلسًا لفتح الدردشة.';
+  $('#chatBox').innerHTML='';$('#chatSend').classList.add('hidden');
+  setKindControls();renderRooms();fillRoomSelect();await loadFeed();
+}
+$('#homeBtn').onclick=returnToHome;
 function userLine(user){return `<button class="userLine" data-user="${esc(user.id)}">${avatarHtml(user)}<span><b>${esc(user.displayName||user.username)}</b><small>@${esc(user.username||'')}</small></span></button>`;}
 async function refreshSocialBadge(){if(!me)return;try{socialSummary=await api('/api/me/social');const unread=(socialSummary.notifications||[]).filter(n=>!n.readAt).length+(socialSummary.requests||[]).length;$('#notificationCount').textContent=unread;$('#notificationCount').classList.toggle('hidden',!unread);}catch{}}
 function renderNotificationList(notifications=[]){$('#notificationsList').innerHTML=notifications.length?notifications.map(n=>`<div class="msg ${n.readAt?'':'unread'}"><b>${esc(n.text)}</b><small class="time">${fmt(n.createdAt)}</small></div>`).join(''):'<div class="empty">لا توجد تنبيهات.</div>';}

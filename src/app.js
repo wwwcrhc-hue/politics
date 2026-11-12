@@ -16,15 +16,12 @@ const { securityHeaders } = require('./middleware/security');
 const { createAdminRouter } = require('./routes/adminRoutes');
 const { createAuthRouter } = require('./routes/authRoutes');
 const { createChatRouter } = require('./routes/chatRoutes');
-const { createChannelsRouter, createChannelPlayerPayload } = require('./routes/channelsRoutes');
 const { createHealthRouter } = require('./routes/healthRoutes');
 const { createPostsRouter } = require('./routes/postsRoutes');
 const { createReportsRouter } = require('./routes/reportsRoutes');
 const { createRoomsRouter } = require('./routes/roomsRoutes');
 const { createSharedRepository } = require('./repositories/sharedRepository');
-const { createChannelsRepository } = require('./repositories/channelsRepository');
 const { createRealtimeService } = require('./services/realtimeService');
-const { createYouTubeLiveResolver } = require('./services/youtubeLiveResolver');
 const { createRoomPermissionsService } = require('./services/roomPermissionsService');
 const { makeId } = require('./utils/id');
 const { createMappers } = require('./utils/mappers');
@@ -80,77 +77,6 @@ const upload = createUpload({ uploadDir: env.UPLOAD_DIR });
 const deleteUploadUrl = createDeleteUploadUrl({ uploadDir: env.UPLOAD_DIR });
 
 const realtime = createRealtimeService({ io, pool, cleanText, decodeSocketToken, getUserById, getRoomById, roomPower, publicUser, makeId, now, logError, logModeration });
-const channelsRepository = createChannelsRepository({ pool });
-const youtubeLiveResolver = createYouTubeLiveResolver({ channelsRepository, env, logError });
-const newsCache = { at: 0, items: [] };
-const NEWS_SOURCES = [
-  { name: 'Al Arabiya', lang: 'ar', url: 'https://www.alarabiya.net/.mrss/ar.xml' },
-  { name: 'Al Hadath', lang: 'ar', url: 'https://www.alhadath.net/.mrss/alhadath.xml' },
-  { name: 'Al Jazeera', lang: 'en', url: 'https://www.aljazeera.com/xml/rss/all.xml' },
-  { name: 'BBC World', lang: 'en', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
-  { name: 'France 24 Arabic', lang: 'ar', url: 'https://www.france24.com/ar/rss' },
-  { name: 'France 24 English', lang: 'en', url: 'https://www.france24.com/en/rss' },
-  { name: 'The Guardian World', lang: 'en', url: 'https://www.theguardian.com/world/rss' },
-  { name: 'UN News', lang: 'en', url: 'https://news.un.org/feed/subscribe/en/news/all/rss.xml' },
-  { name: 'Euronews', lang: 'multi', url: 'https://www.euronews.com/rss?level=theme&name=news' },
-  { name: 'CBC World', lang: 'en', url: 'https://www.cbc.ca/webfeed/rss/rss-topstories' }
-];
-
-function decodeXmlText(value = '') {
-  return String(value)
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function tagValue(block, tag) {
-  return decodeXmlText(block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
-}
-
-function parseNewsFeed(xml, source) {
-  const blocks = [...String(xml || '').matchAll(/<item[\s\S]*?<\/item>|<entry[\s\S]*?<\/entry>/gi)].map(m => m[0]);
-  return blocks.slice(0, 8).map(block => {
-    const title = tagValue(block, 'title');
-    const link = tagValue(block, 'link') || decodeXmlText(block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1] || '');
-    const summary = tagValue(block, 'description') || tagValue(block, 'summary') || tagValue(block, 'content');
-    const published = tagValue(block, 'pubDate') || tagValue(block, 'updated') || tagValue(block, 'published') || '';
-    return title && link ? { id: `${source.name}:${link}`, source: source.name, lang: source.lang, title, link, summary: summary.slice(0, 220), published } : null;
-  }).filter(Boolean);
-}
-
-async function fetchPoliticalNews() {
-  if (Date.now() - newsCache.at < 10 * 60 * 1000 && newsCache.items.length) return newsCache.items;
-  const batches = await Promise.allSettled(NEWS_SOURCES.map(async source => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6500);
-    try {
-      const response = await fetch(source.url, { signal: controller.signal, headers: { 'User-Agent': `${env.APP_NAME}/7 RSS reader` } });
-      if (!response.ok) throw new Error(`RSS ${response.status}`);
-      return parseNewsFeed(await response.text(), source);
-    } finally {
-      clearTimeout(timer);
-    }
-  }));
-  const seen = new Set();
-  const items = batches.flatMap(r => r.status === 'fulfilled' ? r.value : [])
-    .filter(item => {
-      const key = item.link.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .sort((a, b) => new Date(b.published || 0) - new Date(a.published || 0))
-    .slice(0, 36);
-  if (items.length) Object.assign(newsCache, { at: Date.now(), items });
-  return newsCache.items;
-}
-
 app.disable('x-powered-by');
 app.use(securityHeaders);
 app.use(express.json({ limit: '2mb' }));
@@ -159,12 +85,6 @@ app.use('/uploads', express.static(env.UPLOAD_DIR, { fallthrough: false, maxAge:
 app.use(express.static(env.PUBLIC_DIR, { maxAge: 0 }));
 
 app.use('/api/health', createHealthRouter({ pool, appName: env.APP_NAME, version: env.VERSION, now, getPort: () => server.address()?.port || null }));
-
-app.get('/api/political-news', async (_req, res, next) => {
-  try {
-    res.json({ updatedAt: now(), sources: NEWS_SOURCES.map(({ name, lang }) => ({ name, lang })), items: await fetchPoliticalNews() });
-  } catch (e) { next(e); }
-});
 
 app.post('/api/live/:roomId/topic-media', auth, requireActiveUser, upload.single('media'), async (req, res, next) => {
   try {
@@ -184,33 +104,6 @@ app.post('/api/live/:roomId/topic-media', auth, requireActiveUser, upload.single
     if (uploadedTitle) live.topicTitle = uploadedTitle;
     const previous = live.topicMedia;
     const media = { url: `/uploads/${req.file.filename}`, type: req.file.mimetype.startsWith('image/') ? 'image' : 'video', mime: req.file.mimetype, name: cleanText(req.file.originalname, 120), size: req.file.size };
-    live.topicMedia = media;
-    live.topicPlayback = { playing: true, muted: false };
-    if (previous?.url) deleteUploadUrl(previous.url);
-    io.to(`live:${roomId}`).emit('live:topic-media', { roomId, media });
-    io.to(`live:${roomId}`).emit('live:title', { roomId, title: live.topicTitle || '' });
-    io.to(`room:${roomId}`).emit('live:status', realtime.livePublic(live));
-    io.emit('rooms:live-status', { roomId, active: true, live: realtime.livePublic(live) });
-    res.json({ ok: true, media });
-  } catch (e) { next(e); }
-});
-
-app.post('/api/live/:roomId/topic-channel', auth, requireActiveUser, express.json(), async (req, res, next) => {
-  try {
-    const roomId = cleanText(req.params.roomId, 40);
-    const channelId = cleanText(req.body?.channelId, 80);
-    const room = await getRoomById(roomId);
-    const live = realtime.liveByRoom.get(roomId);
-    if (!room || !live) return res.status(404).json({ error: 'لا يوجد بث مباشر في هذه الساحة' });
-    if (live.hostUserId !== req.fullUser.id) return res.status(403).json({ error: 'صاحب البث فقط يستطيع تغيير موضوع الحوار' });
-    const channel = await channelsRepository.getChannel(channelId);
-    if (!channel || !channel.isActive) return res.status(404).json({ error: 'القناة غير موجودة' });
-    const player = createChannelPlayerPayload(channel);
-    if (!player.playable || !player.embedUrl) return res.status(400).json({ error: 'هذه القناة غير متاحة للعرض داخل مربع الحوار' });
-    const uploadedTitle = cleanText(req.body?.title, 120);
-    live.topicTitle = uploadedTitle || `نقاش ${channel.name}`;
-    const previous = live.topicMedia;
-    const media = { url: player.embedUrl, type: 'channel', name: channel.name, channelId: channel.id, playerType: player.playerType, youtubeUrl: player.youtubeUrl, fallbackUrl: player.fallbackUrl };
     live.topicMedia = media;
     live.topicPlayback = { playing: true, muted: false };
     if (previous?.url) deleteUploadUrl(previous.url);
@@ -292,6 +185,7 @@ app.get('/api/users/:id/posts', async (req, res, next) => {
         count(distinct c.id) as comments_count,
         bool_or(case when l.user_id = $1 then true else false end) as liked_by_me
       from posts p
+      join rooms r on r.id = p.room_id and r.poetry_kind in ('reply','dialogue','zamil')
       join users u on u.id = p.user_id
       left join likes l on l.post_id = p.id
       left join comments c on c.post_id = p.id
@@ -481,7 +375,6 @@ app.use('/api', createReportsRouter({ pool, auth, requireActiveUser, requireAdmi
 app.use('/api', createChatRouter({ pool, io, auth, requireActiveUser, getRoomById, canModerateRoom, messageFromRow, userFromRow, publicUser }));
 
 app.use('/api/admin', createAdminRouter({ pool, auth, requireAdmin, cleanText, rowTime, userFromRow, publicUser, getLiveByRoom: () => realtime.liveByRoom, getVoiceRooms: () => realtime.voiceRooms, livePublic: realtime.livePublic }));
-app.use('/api', createChannelsRouter({ pool, auth, requireActiveUser, cleanText, jwt, jwtSecret: env.JWT_SECRET }));
 
 realtime.registerHandlers();
 
@@ -507,7 +400,6 @@ function startServer(port = env.START_PORT, attempt = 0) {
   };
   const onListening = () => {
     server.off('error', onError);
-    youtubeLiveResolver.start();
     const actual = server.address().port;
     console.log(`\n${env.APP_NAME} ${env.VERSION}\nhttp://localhost:${actual}\nفحص: http://localhost:${actual}/api/health\n`);
   };
@@ -517,7 +409,6 @@ function startServer(port = env.START_PORT, attempt = 0) {
 }
 
 function shutdown(done = () => process.exit(0)) {
-  youtubeLiveResolver.stop();
   io.close(() => server.close(() => pool.end(done)));
 }
 
