@@ -178,7 +178,31 @@ async function leaveVoice(){if(currentRoom)socket.emit('voice:leave',{roomId:cur
 $('#joinVoiceBtn').onclick=joinVoice; $('#leaveVoiceBtn').onclick=leaveVoice; $('#muteBtn').onclick=()=>{if(!voiceStream)return;voiceMuted=!voiceMuted;voiceStream.getAudioTracks().forEach(t=>t.enabled=!voiceMuted);$('#muteBtn').textContent=voiceMuted?'فتح الميكروفون':'كتم الميكروفون';};
 socket.on('voice:peers',async d=>{if(d.roomId!==currentRoom)return;for(const id of d.peers)await createVoiceOffer(id);}); socket.on('voice:user-left',d=>{voicePeers.get(d.socketId)?.close();voicePeers.delete(d.socketId);document.getElementById(`audio-${d.socketId}`)?.remove();}); socket.on('voice:count',d=>{if(d.roomId===currentRoom)$('#voiceCount').textContent=d.count;}); socket.on('voice:error',d=>toast(d.error));
 
-async function startLive(){if(!me)return openModal();if(!canAct())return toast('حسابك لا يملك صلاحية بدء البث حاليًا');if(!currentRoom)return toast('اختر ساحة أولًا');if(activeLive)return toast('يوجد بث مباشر قائم في هذه الساحة الآن');try{liveStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});liveMuted=false;liveHost=true;liveBroadcaster=true;liveMessages=[];renderLiveChat([]);showLocalLive();$('#liveStatus').textContent='أنت تبث الآن';updateLiveActionButtons();socket.emit('live:start',{token,roomId:currentRoom,title:$('#liveTopicTitleInput').value.trim()});}catch(e){toast('تعذر تشغيل الكاميرا/الميكروفون: '+e.message);}}
+function liveStartBlockReason(){
+  if(!me)return 'سجل الدخول لبدء بث مباشر';
+  if(!canAct())return 'حسابك لا يملك صلاحية بدء البث حاليًا';
+  if(!currentRoom)return 'اختر مجلسًا من قائمة مجالس الشعراء، ثم اضغط ابدأ بث فيديو';
+  if(currentRoomPower.banned)return 'لا يمكنك بدء بث في هذا المجلس لأنك محظور منه';
+  if(currentRoomPower.roomStatus!=='active')return 'هذا المجلس مغلق حاليًا';
+  if(activeLive)return 'يوجد بث مباشر قائم في هذا المجلس؛ يمكنك مشاهدته';
+  return '';
+}
+async function startLive(){
+  const reason=liveStartBlockReason();
+  if(reason){
+    $('#liveStatus').textContent=reason;
+    toast(reason);
+    if(!me)openModal();
+    else if(canAct()&&!currentRoom){
+      $('#rooms').scrollIntoView({behavior:'smooth',block:'center'});
+      document.querySelector('.roomBtn')?.focus({preventScroll:true});
+    }
+    return;
+  }
+  if(liveBroadcaster)return;
+  if(!socket.connected)return toast('الاتصال بالخادم غير جاهز؛ انتظر قليلًا ثم حاول مجددًا');
+  if(!navigator.mediaDevices?.getUserMedia)return toast('الكاميرا غير متاحة؛ افتح الموقع عبر HTTPS في متصفح يدعم الكاميرا');
+  try{liveStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});liveMuted=false;liveHost=true;liveBroadcaster=true;liveMessages=[];renderLiveChat([]);showLocalLive();$('#liveStatus').textContent='أنت تبث الآن';updateLiveActionButtons();socket.emit('live:start',{token,roomId:currentRoom,title:$('#liveTopicTitleInput').value.trim()});}catch(e){toast('تعذر تشغيل الكاميرا/الميكروفون: '+e.message);}}
 function updateLiveStageLayout(){const stage=$('#liveStage');const count=stage.querySelectorAll('.liveTile:not(.hidden)').length;stage.classList.remove('slots-1','slots-2','slots-4','slots-6');stage.classList.add(count<=1?'slots-1':count<=2?'slots-2':count<=4?'slots-4':'slots-6');document.body.classList.toggle('liveMode',!!currentRoom&&(liveBroadcaster||liveWatching));}
 function liveBroadcasterName(id){const b=(activeLive?.broadcasters||[]).find(x=>x.socketId===id);return b?.displayName||(id===socket.id?(me?.displayName||me?.username):'مشارك في البث');}
 function updateLiveTileLabels(){const local=$('#liveLocalName');if(local)local.textContent=liveBroadcasterName(socket.id)||'أنا';document.querySelectorAll('.remoteLive').forEach(v=>{const label=document.querySelector(`#live-remote-tile-${CSS.escape(v.dataset.socket||'')} .liveTileName`);if(label)label.textContent=liveBroadcasterName(v.dataset.socket);});}
@@ -204,12 +228,13 @@ async function watchLive(){if(!currentRoom)return;liveWatching=true;renderLiveCh
 async function stopWatchingLive(){if(currentRoom&&!liveBroadcaster)socket.emit('live:unwatch',{roomId:currentRoom});liveWatching=false;for(const pc of liveViewerPeers.values())pc.close();liveViewerPeers.clear();if(!liveBroadcaster){liveMessages=[];clearRemoteLive();renderLiveTopic(null);if(currentRoom)loadChat();}}
 function requestLiveStatus(){if(currentRoom)socket.emit('live:status-request',{roomId:currentRoom});}
 function updateLiveActionButtons(){
-  const canStartLive=canAct()&&!!currentRoom&&!currentRoomPower.banned&&!activeLive&&!liveBroadcaster;
+  const startReason=liveStartBlockReason();
+  const canStartLive=!startReason&&!liveBroadcaster;
   const broadcasting=liveHost||liveBroadcaster;
   $('#startLiveBtn').classList.toggle('hidden',broadcasting||liveWatching);
-  $('#startLiveBtn').disabled=!canStartLive;
-  $('#startLiveBtn').textContent=activeLive&&!broadcasting?'بدء بث مباشر':'ابدأ بث فيديو';
-  $('#startLiveBtn').title=activeLive&&!broadcasting?'يوجد بث مباشر قائم في هذه الساحة الآن':'';
+  $('#startLiveBtn').disabled=false;
+  $('#startLiveBtn').textContent=!me?'سجل الدخول لبدء البث':!currentRoom?'اختر مجلسًا لبدء البث':'ابدأ بث فيديو';
+  $('#startLiveBtn').title=startReason;
   $('#watchLiveBtn').classList.toggle('hidden',!activeLive||broadcasting);
   $('#liveLikeBtn').classList.toggle('hidden',!activeLive&&!broadcasting);
   $('#liveLikeBtn').textContent=`إعجاب ${activeLive?.likeCount||0}`;
@@ -236,7 +261,7 @@ function updateLiveActionButtons(){
     if(!currentRoom)$('#liveStatus').textContent='اختر ساحة أولًا لبدء بث مباشر';
     else if(!me)$('#liveStatus').textContent='سجل الدخول لبدء بث مباشر';
     else if(!canAct())$('#liveStatus').textContent='حسابك لا يملك صلاحية بدء البث حاليًا';
-    else if(currentRoomPower.banned)$('#liveStatus').textContent='لا يمكنك بدء بث في هذه الساحة';
+    else if(startReason)$('#liveStatus').textContent=startReason;
     else $('#liveStatus').textContent='لا يوجد بث مباشر الآن';
   }
 }
