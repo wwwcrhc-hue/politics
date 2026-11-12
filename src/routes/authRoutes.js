@@ -9,7 +9,7 @@ function createAuthRouter(dependencies) {
   const router = express.Router();
   const usersRepository = createUsersRepository(dependencies);
   const authService = createAuthService({ ...dependencies, usersRepository });
-  const controller = createAuthController({ authService });
+  const controller = createAuthController({ authService, onUserUpdated: dependencies.onUserUpdated });
 
   router.post('/register', controller.register);
   router.post('/login', controller.login);

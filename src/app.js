@@ -74,6 +74,7 @@ async function getPostForViewer(postId, viewerId = '') {
 
 const { auth, requireAdmin, requireActiveUser, decodeSocketToken } = createAuthMiddleware({ jwt, jwtSecret: env.JWT_SECRET, getUserById });
 const upload = createUpload({ uploadDir: env.UPLOAD_DIR });
+const avatarUpload = createUpload({ uploadDir: env.UPLOAD_DIR, maxFileBytes: 5 * 1024 * 1024, maxFiles: 1, imagesOnly: true });
 const deleteUploadUrl = createDeleteUploadUrl({ uploadDir: env.UPLOAD_DIR });
 
 const realtime = createRealtimeService({ io, pool, cleanText, decodeSocketToken, getUserById, getRoomById, roomPower, publicUser, makeId, now, logError, logModeration });
@@ -133,14 +134,18 @@ app.delete('/api/live/:roomId/topic-media', auth, requireActiveUser, async (req,
 
 app.use('/api/rooms', createRoomsRouter({ pool, io, auth, requireActiveUser, cleanText, makeId, now, rowTime, publicUser, userFromRow, getRoomById, canManageRoom, roomPower, canModerateRoom, getRoomMembership, logModeration, deleteUploadUrl, getLiveByRoom: () => realtime.liveByRoom, livePublic: realtime.livePublic }));
 
-app.use('/api', createAuthRouter({ pool, bcrypt, cleanText, makeId, now, signToken, publicUser, userFromRow, auth, requireActiveUser }));
+app.use('/api', createAuthRouter({ pool, bcrypt, cleanText, makeId, now, signToken, publicUser, userFromRow, auth, requireActiveUser, onUserUpdated: realtime.refreshUserPresence }));
 
-app.post('/api/me/avatar', auth, requireActiveUser, upload.single('avatar'), async (req, res, next) => {
+app.post('/api/me/avatar', auth, requireActiveUser, avatarUpload.single('avatar'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'اختر صورة للبروفايل' });
     if (!req.file.mimetype.startsWith('image/')) {
       deleteUploadUrl(`/uploads/${req.file.filename}`);
       return res.status(400).json({ error: 'صورة البروفايل يجب أن تكون صورة' });
+    }
+    if (req.file.size > 5 * 1024 * 1024) {
+      deleteUploadUrl(`/uploads/${req.file.filename}`);
+      return res.status(400).json({ error: 'الحد الأقصى لصورة البروفايل 5 ميغابايت' });
     }
     const user = await getUserById(req.user.id);
     const avatarUrl = `/uploads/${req.file.filename}`;
@@ -195,6 +200,21 @@ app.get('/api/users/:id/posts', async (req, res, next) => {
       limit 250
     `, [viewerId, userId]);
     res.json(rows.map(postView));
+  } catch (e) { next(e); }
+});
+
+app.get('/api/users/:id/stats', async (req, res, next) => {
+  try {
+    const userId = cleanText(req.params.id, 80);
+    if (!await getUserById(userId)) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    const { rows } = await pool.query(`
+      select
+        (select count(*) from follows where following_id = $1) as followers,
+        (select count(*) from follows where follower_id = $1) as following,
+        (select count(*) from posts p join rooms r on r.id = p.room_id
+          where p.user_id = $1 and r.poetry_kind in ('reply','dialogue','zamil')) as posts
+    `, [userId]);
+    res.json({ followers: Number(rows[0]?.followers || 0), following: Number(rows[0]?.following || 0), posts: Number(rows[0]?.posts || 0) });
   } catch (e) { next(e); }
 });
 
@@ -379,6 +399,8 @@ app.use('/api/admin', createAdminRouter({ pool, auth, requireAdmin, cleanText, r
 realtime.registerHandlers();
 
 app.get('/admin', (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/admin.html`, e => e && next(e)));
+app.get(['/login', '/register'], (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/login.html`, e => e && next(e)));
+app.get('/profile', (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/profile.html`, e => e && next(e)));
 app.get('/', (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/index.html`, e => e && next(e)));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'واجهة API غير موجودة' }));
 app.get('*', (_req, res, next) => res.sendFile(`${env.PUBLIC_DIR}/index.html`, e => e && next(e)));

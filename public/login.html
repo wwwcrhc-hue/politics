@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#100d0b">
+  <meta name="description" content="دخول الشعراء إلى منصة الرديات والمحاورات والزوامل، أو إنشاء حساب جديد.">
+  <title>حساب الشعراء | الرديّات والمحاورات والزوامل</title>
+  <link rel="stylesheet" href="/account-pages.css?v=9.1-accounts">
+  <script src="/account-auth.js?v=9.1-accounts" defer></script>
+</head>
+<body class="account-page auth-page">
+  <header class="account-topbar">
+    <a href="/" class="account-brand" aria-label="العودة إلى الصفحة الرئيسية"><span class="account-brand-icon">❖</span><span><strong>الرديّات والمحاورات والزوامل</strong><small>مجالس الشعر الشعبي</small></span></a>
+    <a href="/" class="account-nav-link">← العودة إلى المجالس</a>
+  </header>
+
+  <main class="auth-layout">
+    <section class="auth-story" aria-label="مرحبًا بالشعراء">
+      <span class="account-eyebrow"><span class="account-glow-dot"></span> ديوان الشعر والحضور</span>
+      <h1>هنا تبدأ <em>حكايتك</em><br>مع القصيدة.</h1>
+      <p>انضم إلى مجالس الرديّات، وشارك في المحاورات، وأنشد الزوامل. حسابك يجمع قصائدك ومتابعيك وحضورك المباشر في مكان واحد.</p>
+      <div class="auth-benefits">
+        <div><span>✒</span><strong>قصائدك في ديوانك</strong><small>انشر أبياتك واحتفظ بسجل مشاركاتك.</small></div>
+        <div><span>◈</span><strong>مجالس بصوتك</strong><small>شارك في المحاورات والبث المباشر.</small></div>
+        <div><span>♬</span><strong>ملف يعبّر عنك</strong><small>صورة واسم شعري ونبذة وروابطك.</small></div>
+      </div>
+      <div class="auth-quote">«للكلمة وزن، وللرد صدى»</div>
+    </section>
+
+    <section class="auth-box" aria-labelledby="authHeading">
+      <div class="auth-box-top"><span class="account-chip">منصة الشعراء</span><a href="/" aria-label="إغلاق والعودة">✕</a></div>
+      <div class="auth-tabs" role="tablist" aria-label="الدخول أو التسجيل">
+        <button type="button" id="loginTab" role="tab" aria-selected="true" class="active">تسجيل الدخول</button>
+        <button type="button" id="registerTab" role="tab" aria-selected="false">إنشاء حساب</button>
+      </div>
+      <h2 id="authHeading">مرحبًا بعودتك</h2>
+      <p class="account-subtitle" id="authSubtitle">أدخل اسم المستخدم وكلمة المرور لمتابعة مجالسك.</p>
+      <form id="authForm" autocomplete="on" novalidate>
+        <div class="form-field">
+          <label for="username">اسم المستخدم <span>*</span></label>
+          <input id="username" name="username" required minlength="3" maxlength="24" autocomplete="username" placeholder="اسم المستخدم الخاص بك" dir="auto">
+          <small id="usernameHint" class="field-help" hidden>3 إلى 24 حرفًا، حروف أو أرقام أو شرطة سفلية، بدون مسافات.</small>
+        </div>
+        <div class="form-field" id="displayNameField" hidden>
+          <label for="displayName">الاسم الظاهر للشعراء <span>*</span></label>
+          <input id="displayName" name="displayName" maxlength="40" autocomplete="nickname" placeholder="مثل: ماجد الصيعري">
+        </div>
+        <div class="form-field">
+          <label for="password">كلمة المرور <span>*</span></label>
+          <div class="password-control"><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128" placeholder="كلمة المرور"><button id="passwordToggle" type="button" aria-label="إظهار كلمة المرور" aria-pressed="false">إظهار</button></div>
+          <small class="field-help" id="passwordHint" hidden>كلمة المرور لا تقل عن 8 أحرف.</small>
+        </div>
+        <div class="form-field" id="confirmPasswordField" hidden>
+          <label for="confirmPassword">تأكيد كلمة المرور <span>*</span></label>
+          <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" maxlength="128" placeholder="أعد إدخال كلمة المرور">
+        </div>
+        <div class="form-message" id="authMessage" role="status" aria-live="polite" hidden></div>
+        <button type="submit" id="authSubmit" class="account-primary auth-submit">دخول إلى المجالس <span>←</span></button>
+      </form>
+      <p class="auth-switch" id="switchWrap">ليس لديك حساب؟ <button type="button" id="switchAuth">أنشئ حسابًا مجانًا</button></p>
+      <p class="auth-footnote">نسيت كلمة المرور؟ تواصل مع إدارة الموقع للتحقق من ملكية الحساب وإعادة تعيينها بأمان. لا تشارك كلمة مرورك مع أحد.</p>
+    </section>
+  </main>
+  <footer class="account-footer">الرديّات • المحاورات • الزوامل <span>مجالس الشعر الشعبي</span></footer>
+</body>
+</html>

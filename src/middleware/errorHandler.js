@@ -5,7 +5,11 @@ function createErrorHandler({ multer, logError }) {
     logError(error, `${req.method} ${req.originalUrl}`);
     console.error(error);
     if (res.headersSent) return next(error);
-    if (error instanceof multer.MulterError) return res.status(400).json({ error: error.code === 'LIMIT_FILE_SIZE' ? 'حجم الملف أكبر من 200MB' : 'خطأ في رفع الملف' });
+    if (error instanceof multer.MulterError) {
+      const maxUploadSize = req.originalUrl.startsWith('/api/me/avatar') ? '5MB' : '200MB';
+      return res.status(400).json({ error: error.code === 'LIMIT_FILE_SIZE' ? `حجم الملف أكبر من ${maxUploadSize}` : 'خطأ في رفع الملف' });
+    }
+    if (error.status === 400) return res.status(400).json({ error: error.message });
     res.status(error.status || 500).json({ error: 'حدث خطأ داخلي غير متوقع', details: process.env.NODE_ENV === 'production' ? undefined : String(error.message || error) });
   };
 }

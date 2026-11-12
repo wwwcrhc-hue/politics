@@ -11,6 +11,8 @@ create table if not exists users (
   username text not null,
   display_name text not null,
   bio text not null default '',
+  city text not null default '',
+  website text not null default '',
   avatar_url text not null default '',
   password_hash text not null,
   role text not null default 'user',
@@ -26,6 +28,9 @@ alter table users
 
 alter table users
   add column if not exists avatar_url text not null default '';
+
+alter table users add column if not exists city text not null default '';
+alter table users add column if not exists website text not null default '';
 
 do $$
 begin

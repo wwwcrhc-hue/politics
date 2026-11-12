@@ -7,6 +7,9 @@ alter table users
 alter table users
   add column if not exists avatar_url text not null default '';
 
+alter table users add column if not exists city text not null default '';
+alter table users add column if not exists website text not null default '';
+
 do $$
 begin
   if not exists (

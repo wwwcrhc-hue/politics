@@ -1,6 +1,6 @@
 'use strict';
 
-function createAuthController({ authService }) {
+function createAuthController({ authService, onUserUpdated }) {
   function handleError(error, res, next) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     return next(error);
@@ -26,7 +26,9 @@ function createAuthController({ authService }) {
 
   async function updateMe(req, res, next) {
     try {
-      res.json(await authService.updateMe(req.user.id, req.body));
+      const user = await authService.updateMe(req.user.id, req.body);
+      if (onUserUpdated) onUserUpdated(user);
+      res.json(user);
     } catch (e) { handleError(e, res, next); }
   }
 

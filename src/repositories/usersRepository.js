@@ -24,8 +24,11 @@ function createUsersRepository({ pool, userFromRow }) {
     return user;
   }
 
-  async function updateProfile(id, { displayName, bio, avatarUrl }) {
-    const { rows } = await pool.query('update users set display_name = $1, bio = $2, avatar_url = $3 where id = $4 returning *', [displayName, bio, avatarUrl || '', id]);
+  async function updateProfile(id, { username, displayName, bio, city, website, avatarUrl }) {
+    const { rows } = await pool.query(
+      'update users set username = $1, display_name = $2, bio = $3, city = $4, website = $5, avatar_url = $6 where id = $7 returning *',
+      [username, displayName, bio, city || '', website || '', avatarUrl || '', id]
+    );
     return userFromRow(rows[0]);
   }
 

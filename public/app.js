@@ -324,7 +324,7 @@ async function removeRoomMember(userId){if(!confirm('إزالة هذا العض�
 async function setRoomStatus(status){try{await api(`/api/rooms/${currentRoom}/status`,{method:'PATCH',body:JSON.stringify({status})});currentRoomPower.roomStatus=status;toast(status==='closed'?'تم إغلاق الغرفة':'تم فتح الغرفة');await refreshRooms();}catch(e){toast(e.message);}}
 
 function openModal(){authMode='login';renderAuthModal();$('#modal').classList.remove('hidden');$('#authName').focus();} function renderAuthModal(){const r=authMode==='register';$('#modalTitle').textContent=r?'إنشاء حساب':'تسجيل الدخول';$('#displayName').classList.toggle('hidden',!r);$('#authSubmit').textContent=r?'إنشاء الحساب':'دخول';$('#switchAuth').textContent=r?'لدي حساب بالفعل':'إنشاء حساب جديد';$('#authError').textContent='';}
-$('#loginBtn').onclick=openModal;
+$('#loginBtn').onclick=()=>{window.location.href=`/login?next=${encodeURIComponent(location.pathname+location.search)}`;};
 $('#closeModal').onclick=()=>$('#modal').classList.add('hidden');
 $('#switchAuth').onclick=()=>{authMode=authMode==='login'?'register':'login';renderAuthModal();};
 $('#authSubmit').onclick=async()=>{try{const body={username:$('#authName').value.trim(),password:$('#authPass').value};if(authMode==='register')body.displayName=$('#displayName').value.trim();const r=await api(`/api/${authMode==='register'?'register':'login'}`,{method:'POST',body:JSON.stringify(body)});token=r.token;me=r.user;localStorage.setItem('token',token);syncSocketAuth();$('#modal').classList.add('hidden');updateAuthUI();await loadFeed();toast(`مرحبًا ${me.displayName}`);}catch(e){$('#authError').textContent=e.message;}};
@@ -360,7 +360,22 @@ async function openMessages(userId=profileUserId,name=''){if(!me)return openModa
 async function sendDirectMessage(){const text=$('#directMessageInput').value.trim();if(!text||!currentMessageUserId)return;try{await api(`/api/messages/${currentMessageUserId}`,{method:'POST',body:JSON.stringify({text})});$('#directMessageInput').value='';await openMessages(currentMessageUserId,$('#messagesTitle').textContent.replace(/^مراسلة\s*/,''));}catch(e){toast(e.message);}}
 async function openProfile(userId=me?.id){if(!userId)return;try{const user=await api(`/api/users/${userId}/profile`), posts=await api(`/api/users/${userId}/posts`), own=me?.id===user.id;profileUserId=user.id;$('#profileTitle').textContent=user.displayName||user.username;$('#profileBioView').textContent=user.bio||'لا توجد نبذة بعد.';$('#profileAvatar').outerHTML=user.avatarUrl?`<img class="profileAvatar" id="profileAvatar" src="${esc(user.avatarUrl)}" alt="${esc(user.displayName||user.username)}">`:`<span class="profileAvatar" id="profileAvatar">${esc((user.displayName||user.username||'م').slice(0,1))}</span>`;$('#profileForm').classList.toggle('hidden',!own);$('#profileActions').classList.toggle('hidden',own||!me);$('#profileStats').textContent='';if(own){$('#profileName').value=me.displayName||'';$('#profileBio').value=me.bio||'';$('#currentPassword').value='';$('#newPassword').value='';}else if(me){const s=await api(`/api/users/${user.id}/social`);const accepted=s.messageRequest?.status==='accepted',pending=s.messageRequest?.status==='pending';$('#profileStats').textContent=`${s.followers||0} متابع · ${s.followingCount||0} يتابع`;$('#followUserBtn').textContent=s.following?'إلغاء المتابعة':'متابعة';$('#requestMessageBtn').textContent=accepted?'مسموح بالمراسلة':pending?'تم إرسال الطلب':'طلب مراسلة';$('#requestMessageBtn').disabled=accepted||pending;$('#openMessagesBtn').classList.toggle('hidden',!accepted);}$('#profilePosts').innerHTML=posts.length?posts.map(postHtml).join(''):'<div class="empty">لا توجد منشورات بعد.</div>';$('#profileModal').classList.remove('hidden');wirePosts();}catch(e){toast(e.message);}}
 async function saveProfile(){if(!me)return;try{const body={displayName:$('#profileName').value.trim(),bio:$('#profileBio').value.trim()};if($('#newPassword').value){body.currentPassword=$('#currentPassword').value;body.newPassword=$('#newPassword').value;}me=await api('/api/me',{method:'PATCH',body:JSON.stringify(body)});const file=$('#profileImage').files?.[0];if(file){const fd=new FormData();fd.append('avatar',file);me=await api('/api/me/avatar',{method:'POST',body:fd});$('#profileImage').value='';}updateAuthUI();await loadFeed();await openProfile(me.id);toast('تم تحديث البروفايل');}catch(e){toast(e.message);}}
-$('#profileBtn').onclick=()=>openProfile(me?.id);
+$('#profileBtn').onclick=()=>{
+  if (liveHost || liveBroadcaster || liveWatching || voiceStream) window.open('/profile', '_blank', 'noopener');
+  else window.location.href='/profile';
+};
+const fullProfileLink=document.createElement('a');
+fullProfileLink.className='poetryFullProfileLink';
+fullProfileLink.href='/profile';
+fullProfileLink.textContent='عرض الملف الكامل وإعدادات الحساب ←';
+fullProfileLink.onclick=event=>{
+  event.preventDefault();
+  if(!profileUserId)return;
+  const url=`/profile?user=${encodeURIComponent(profileUserId)}`;
+  if(liveHost || liveBroadcaster || liveWatching || voiceStream)window.open(url,'_blank','noopener');
+  else location.href=url;
+};
+$('#profileStats').after(fullProfileLink);
 $('#closeProfile').onclick=()=>$('#profileModal').classList.add('hidden');
 $('#saveProfileBtn').onclick=saveProfile;
 $('#notificationsBtn').onclick=loadSocialModal;

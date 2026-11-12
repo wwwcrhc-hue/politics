@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#100d0b">
+  <meta name="description" content="ملف الشاعر الشخصي: القصائد، المتابعون، معلومات الحساب وإعدادات الأمان.">
+  <title>الملف الشخصي | الرديّات والمحاورات والزوامل</title>
+  <link rel="stylesheet" href="/account-pages.css?v=9.1-accounts">
+  <script src="/account-profile.js?v=9.1-accounts" defer></script>
+</head>
+<body class="account-page profile-page">
+  <header class="account-topbar">
+    <a href="/" class="account-brand"><span class="account-brand-icon">❖</span><span><strong>الرديّات والمحاورات والزوامل</strong><small>مجالس الشعر الشعبي</small></span></a>
+    <nav class="account-top-actions" aria-label="روابط حسابي">
+      <a href="/" class="account-nav-link">الرئيسية</a>
+      <a href="/login?next=%2Fprofile" id="profileLoginLink" class="account-primary account-small">تسجيل الدخول</a>
+      <a href="/profile" id="myProfileLink" class="account-small" hidden>حسابي</a>
+      <a href="/admin" id="adminLink" class="account-small" hidden>لوحة الإدارة</a>
+      <button type="button" id="logoutButton" class="account-small" hidden>خروج</button>
+    </nav>
+  </header>
+
+  <main class="profile-container">
+    <div class="breadcrumb"><a href="/">مجالس الشعراء</a><span>‹</span><span id="breadcrumbName">الملف الشخصي</span></div>
+    <div id="profileStatus" class="profile-status" role="status" aria-live="polite">جاري تحميل الملف الشخصي...</div>
+
+    <section class="profile-hero" id="profileHero" hidden>
+      <div class="profile-cover"><span>❖</span><div>ديوان الشعراء</div></div>
+      <div class="profile-hero-content">
+        <div class="avatar-holder"><div class="profile-avatar" id="heroAvatar" aria-label="صورة الشاعر"><span>✒</span></div><label class="avatar-edit" id="avatarEditLabel" hidden title="تغيير صورة البروفايل">✎<input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="رفع صورة شخصية"></label></div>
+        <div class="profile-identification"><span class="account-eyebrow" id="ownerTag">صفحة الشاعر</span><h1 id="heroName">الشاعر</h1><p class="profile-username" id="heroUsername">@</p><p class="profile-bio" id="heroBio">لم يكتب الشاعر نبذة بعد.</p><div class="profile-meta" id="heroMeta"></div></div>
+        <div class="profile-hero-actions"><button type="button" id="followButton" class="account-primary" hidden>متابعة الشاعر</button><button type="button" id="shareButton" class="account-outline">مشاركة الملف ↗</button></div>
+      </div>
+      <div class="profile-stats" aria-label="إحصاءات الحساب">
+        <div><strong id="postsCount">0</strong><span>قصيدة ومشاركة</span></div>
+        <div><strong id="followersCount">—</strong><span>متابع</span></div>
+        <div><strong id="followingCount">—</strong><span>يتابع</span></div>
+        <div><strong id="joinedValue">—</strong><span>تاريخ الانضمام</span></div>
+      </div>
+    </section>
+
+    <div id="profileContent" class="profile-content" hidden>
+      <aside class="profile-sidebar" aria-label="أقسام الملف الشخصي">
+        <div class="sidebar-heading">الملف الشخصي</div>
+        <a class="sidebar-link active" href="#poemsSection"><span>✒</span> قصائد ومشاركات</a>
+        <a class="sidebar-link owner-only" href="#editSection" hidden><span>☷</span> تعديل الملف الشخصي</a>
+        <a class="sidebar-link owner-only" href="#securitySection" hidden><span>♢</span> الأمان وكلمة المرور</a>
+        <div class="sidebar-note"><span class="account-glow-dot"></span> للشعر مكان، ولأهله مجلس.</div>
+      </aside>
+
+      <div class="profile-panels">
+        <section class="profile-section" id="poemsSection" aria-labelledby="poemsHeading">
+          <div class="section-head"><div><span class="account-eyebrow">ديوان الشاعر</span><h2 id="poemsHeading">القصائد والمشاركات</h2></div><a href="/" class="account-text-link">اذهب إلى المجالس ←</a></div>
+          <div id="poemsList" class="poems-list"><div class="profile-empty">جاري عرض القصائد...</div></div>
+        </section>
+
+        <section class="profile-section owner-only" id="editSection" aria-labelledby="editHeading" hidden>
+          <div class="section-head"><div><span class="account-eyebrow">هويتك في المجالس</span><h2 id="editHeading">تعديل الملف الشخصي</h2></div><span class="account-chip">حسابي</span></div>
+          <form id="profileForm" novalidate>
+            <div class="edit-form-grid">
+              <div class="form-field"><label for="editDisplayName">الاسم الظاهر <span>*</span></label><input id="editDisplayName" name="displayName" maxlength="40" required placeholder="اسمك الذي يراه الشعراء"><small class="field-help">يمكنك استعمال اسمك الحقيقي أو اسمك الشعري.</small></div>
+              <div class="form-field"><label for="editUsername">اسم المستخدم <span>*</span></label><input id="editUsername" name="username" maxlength="24" minlength="3" required dir="auto"><small class="field-help">3–24 حرفًا بلا مسافات. تغيير اسم المستخدم يتطلب كلمة مرورك الحالية.</small></div>
+              <div class="form-field"><label for="editCity">المدينة / المنطقة</label><input id="editCity" name="city" maxlength="80" placeholder="مثل: نجران، دبي"></div>
+              <div class="form-field"><label for="editWebsite">موقعي أو رابط صفحتي</label><input id="editWebsite" name="website" type="text" maxlength="180" inputmode="url" dir="ltr" placeholder="example.com أو https://example.com"></div>
+              <div class="form-field full"><label for="editBio">نبذة عنك</label><textarea id="editBio" name="bio" maxlength="240" rows="4" placeholder="من أنت؟ ما لون الشعر الذي تفضله؟"></textarea><small class="field-help"><span id="bioLength">0</span> / 240 حرفًا</small></div>
+            </div>
+            <div class="form-field" id="usernamePasswordField" hidden><label for="usernameCurrentPassword">كلمة المرور الحالية لتغيير اسم المستخدم <span>*</span></label><input id="usernameCurrentPassword" type="password" autocomplete="current-password" maxlength="128" placeholder="أدخل كلمة مرور حسابك الحالية"></div>
+            <div class="form-message" id="editMessage" role="status" aria-live="polite" hidden></div>
+            <div class="form-actions"><button type="submit" class="account-primary" id="saveProfileButton">حفظ التغييرات</button><button type="button" class="account-outline" id="resetProfileButton">إلغاء التعديلات</button></div>
+          </form>
+          <div class="profile-upload-hint">لتغيير صورة البروفايل، اضغط على علامة القلم بجانب صورتك أعلى الصفحة. الحد الأقصى 5 ميغابايت.</div>
+        </section>
+
+        <section class="profile-section owner-only" id="securitySection" aria-labelledby="securityHeading" hidden>
+          <div class="section-head"><div><span class="account-eyebrow">حماية الحساب</span><h2 id="securityHeading">تغيير كلمة المرور</h2></div><span class="security-icon">◇</span></div>
+          <p class="section-description">استخدم كلمة مرور قوية تختلف عن السابقة. ستحتاج إلى كلمة المرور الحالية لإتمام التغيير.</p>
+          <form id="passwordForm" class="password-form" novalidate>
+            <div class="form-field"><label for="currentPasswordInput">كلمة المرور الحالية <span>*</span></label><input id="currentPasswordInput" type="password" autocomplete="current-password" maxlength="128" required></div>
+            <div class="form-field"><label for="newPasswordInput">كلمة المرور الجديدة <span>*</span></label><input id="newPasswordInput" type="password" autocomplete="new-password" maxlength="128" required placeholder="8 أحرف على الأقل"></div>
+            <div class="form-field"><label for="confirmNewPasswordInput">تأكيد كلمة المرور الجديدة <span>*</span></label><input id="confirmNewPasswordInput" type="password" autocomplete="new-password" maxlength="128" required></div>
+            <div class="form-message" id="passwordMessage" role="status" aria-live="polite" hidden></div>
+            <div class="form-actions"><button type="submit" class="account-primary" id="savePasswordButton">تحديث كلمة المرور</button></div>
+          </form>
+          <p class="section-notice">إذا نسيت كلمة المرور الحالية، تواصل مع إدارة الموقع لتأكيد هويتك وإعادة تعيينها.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer class="account-footer">الرديّات • المحاورات • الزوامل <span>ديوان يجمع الشعراء</span></footer>
+</body>
+</html>

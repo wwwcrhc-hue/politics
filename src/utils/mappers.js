@@ -14,6 +14,8 @@ function createMappers({ rowTime }) {
       username: row.username,
       displayName: row.display_name,
       bio: row.bio || '',
+      city: row.city || '',
+      website: row.website || '',
       avatarUrl: row.avatar_url || '',
       passwordHash: row.password_hash,
       role: row.role || 'user',

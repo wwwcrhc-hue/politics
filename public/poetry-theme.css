@@ -148,6 +148,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .roomHero { border-top: 3px solid #b99055; }
 .roomHero h1 { font-size: clamp(23px, 2.2vw, 31px); }
 .roomHero p { color: #bdae99; }
+.poetryFullProfileLink { display: inline-block; margin-top: 12px; color: #f1d399; font-size: 12px; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
 .postText { font-size: 18px; line-height: 2.2; font-family: Georgia, 'Times New Roman', Tahoma, serif; }
 .post .roomTag { display: inline-block; background: rgba(219,172,97,.12); border-radius: 8px; padding: 5px 9px; }
 .post .author { color: #fff4db; }
